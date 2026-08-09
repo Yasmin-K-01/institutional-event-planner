@@ -1,0 +1,120 @@
+/* Custom Styling for Smart Task Manager Dashboard */
+
+:root {
+    --primary-color: #0d6efd;
+    --bg-color: #f4f6f9;
+    --card-bg: #ffffff;
+    --text-dark: #212529;
+    --text-muted: #6c757d;
+    --border-radius: 12px;
+}
+
+body {
+    background-color: var(--bg-color);
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    color: var(--text-dark);
+}
+
+/* Dashboard Container */
+.container {
+    max-width: 920px;
+}
+
+/* Cards & Panels */
+.card {
+    border: none;
+    border-radius: var(--border-radius);
+    background-color: var(--card-bg);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.card:hover {
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.08) !important;
+}
+
+/* Header Title */
+h2 {
+    font-weight: 700;
+    color: #1e293b;
+    letter-spacing: -0.5px;
+}
+
+/* Form Inputs & Selects */
+.form-control, .form-select {
+    border-radius: 8px;
+    border: 1px solid #cbd5e1;
+    padding: 0.6rem 0.85rem;
+    font-size: 0.95rem;
+}
+
+.form-control:focus, .form-select:focus {
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.15);
+}
+
+/* Buttons */
+.btn {
+    border-radius: 8px;
+    font-weight: 500;
+    padding: 0.5rem 1rem;
+    transition: all 0.2s ease-in-out;
+}
+
+.btn-primary {
+    background-color: #2563eb;
+    border-color: #2563eb;
+}
+
+.btn-primary:hover {
+    background-color: #1d4ed8;
+    border-color: #1d4ed8;
+}
+
+/* Action Bar Filter Buttons */
+.btn-group .btn {
+    border-radius: 6px !important;
+}
+
+/* Task List Items */
+.list-group-item {
+    border: 1px solid #f1f5f9;
+    border-radius: 8px !important;
+    margin-bottom: 8px;
+    background-color: #ffffff;
+    transition: background-color 0.2s ease;
+}
+
+.list-group-item:hover {
+    background-color: #f8fafc;
+}
+
+/* Subtasks Indented Box */
+.list-group-item ul {
+    background-color: #f8fafc;
+    border-left: 3px solid #60a5fa;
+    padding: 8px 12px 8px 28px;
+    border-radius: 0 6px 6px 0;
+    margin-top: 8px;
+}
+
+.list-group-item ul li {
+    padding: 2px 0;
+    color: #475569;
+}
+
+/* Badges */
+.badge {
+    font-weight: 600;
+    padding: 0.35em 0.65em;
+    border-radius: 6px;
+}
+
+/* Charts Card Container */
+canvas {
+    padding: 4px;
+}
+
+/* Smooth Scrolling */
+html {
+    scroll-behavior: smooth;
+}

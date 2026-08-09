@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Smart Task Manager Dashboard</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        body.dark-mode { background-color: #121212 !important; color: #e0e0e0 !important; }
+        body.dark-mode .card, body.dark-mode .modal-content { background-color: #1e1e1e !important; color: #e0e0e0 !important; border-color: #333 !important; }
+        body.dark-mode .list-group-item { background-color: #252525 !important; color: #e0e0e0 !important; border-color: #333 !important; }
+        .kanban-col { min-height: 250px; background-color: rgba(0,0,0,0.03); border-radius: 8px; padding: 10px; }
+        body.dark-mode .kanban-col { background-color: rgba(255,255,255,0.05); }
+        .kanban-card { cursor: grab; }
+    </style>
+</head>
+<body class="bg-light">
+
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+        <div class="container">
+            <a class="navbar-brand fw-bold" href="#">Smart Task Manager</a>
+            <div class="d-flex align-items-center">
+                <button class="btn btn-outline-warning me-3 btn-sm" id="themeToggle" onclick="toggleDarkMode()">🌙 Dark Mode</button>
+                <div id="authNav"></div>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-2" style="max-width: 1000px;">
+        <div class="card p-4 mb-4 shadow-sm">
+            <h5 class="fw-bold mb-3">Add New Task</h5>
+            <form id="taskForm">
+                <div class="row g-3">
+                    <div class="col-md-5">
+                        <input type="text" id="title" class="form-control" placeholder="Task Title" required>
+                    </div>
+                    <div class="col-md-3">
+                        <select id="category" class="form-select">
+                            <option value="College" selected>College</option>
+                            <option value="Work">Work</option>
+                            <option value="Personal">Personal</option>
+                            <option value="Project">Project</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <select id="priority" class="form-select">
+                            <option value="LOW">Low</option>
+                            <option value="MEDIUM" selected>Medium</option>
+                            <option value="HIGH">High</option>
+                        </select>
+                    </div>
+                    <div class="col-md-2">
+                        <input type="date" id="dueDate" class="form-control">
+                    </div>
+                    <div class="col-md-12">
+                        <input type="text" id="description" class="form-control" placeholder="Description (Optional)">
+                    </div>
+                    <div class="col-md-12">
+                        <button type="submit" class="btn btn-primary w-100">Add Task</button>
+                    </div>
+                </div>
+            </form>
+        </div>
+
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="card p-3 shadow-sm h-100">
+                    <h6 class="text-center fw-bold mb-3">Completion Status</h6>
+                    <canvas id="statusChart" style="max-height: 200px;"></canvas>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <div class="card p-3 shadow-sm h-100">
+                    <h6 class="text-center fw-bold mb-3">Priority Distribution</h6>
+                    <canvas id="priorityChart" style="max-height: 200px;"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <div class="row g-2 mb-3 align-items-center">
+            <div class="col-md-4">
+                <select id="categoryFilter" class="form-select" onchange="renderTasks()">
+                    <option value="ALL">All Categories</option>
+                    <option value="College">College</option>
+                    <option value="Work">Work</option>
+                    <option value="Personal">Personal</option>
+                    <option value="Project">Project</option>
+                </select>
+            </div>
+            <div class="col-md-5">
+                <input type="text" id="searchInput" class="form-control" placeholder="Search tasks..." onkeyup="renderTasks()">
+            </div>
+            <div class="col-md-3">
+                <a href="http://localhost:8080/api/tasks/export/pdf" class="btn btn-outline-success w-100" target="_blank">📄 Export PDF</a>
+            </div>
+        </div>
+
+        <h5 class="fw-bold mt-4 mb-3">Task Board (Drag & Drop)</h5>
+        <div class="row g-3 mb-5">
+            <div class="col-md-4">
+                <div class="card p-2 shadow-sm">
+                    <h6 class="fw-bold text-center text-primary mb-2">📋 To Do</h6>
+                    <div id="col-TODO" class="kanban-col" ondragover="allowDrop(event)" ondrop="drop(event, 'TODO')"></div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card p-2 shadow-sm">
+                    <h6 class="fw-bold text-center text-warning mb-2">⏳ In Progress</h6>
+                    <div id="col-IN_PROGRESS" class="kanban-col" ondragover="allowDrop(event)" ondrop="drop(event, 'IN_PROGRESS')"></div>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="card p-2 shadow-sm">
+                    <h6 class="fw-bold text-center text-success mb-2">✅ Completed</h6>
+                    <div id="col-COMPLETED" class="kanban-col" ondragover="allowDrop(event)" ondrop="drop(event, 'COMPLETED')"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal fade" id="authModal" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-header-title fw-bold" id="authModalTitle">Login</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <form id="authForm">
+                        <div class="mb-3">
+                            <label class="form-label">Username</label>
+                            <input type="text" id="authUsername" class="form-control" required>
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label">Password</label>
+                            <input type="password" id="authPassword" class="form-control" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary w-100" id="authSubmitBtn">Login</button>
+                    </form>
+                    <div class="text-center mt-3">
+                        <small id="authToggleText">Don't have an account? <a href="#" onclick="toggleAuthMode(true)">Register here</a></small>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        const API_URL = "http://localhost:8080/api/tasks";
+        const AUTH_URL = "http://localhost:8080/api/auth";
+        let allTasks = [];
+        let statusChart, priorityChart;
+        let isRegisterMode = false;
+        let authModalObj;
+
+        document.addEventListener("DOMContentLoaded", () => {
+            authModalObj = new bootstrap.Modal(document.getElementById('authModal'));
+            updateAuthNav();
+            fetchTasks();
+        });
+
+        function toggleDarkMode() {
+            document.body.classList.toggle("dark-mode");
+            const btn = document.getElementById("themeToggle");
+            btn.innerText = document.body.classList.contains("dark-mode") ? "☀️ Light Mode" : "🌙 Dark Mode";
+        }
+
+        function getAuthHeader() {
+            const token = localStorage.getItem('jwtToken');
+            return token ? { 'Authorization': `Bearer ${token}` } : {};
+        }
+
+        function updateAuthNav() {
+            const nav = document.getElementById("authNav");
+            const username = localStorage.getItem("username");
+            if (username) {
+                nav.innerHTML = `<span class="text-light me-3">👤 Welcome, <strong>${username}</strong></span><button class="btn btn-sm btn-outline-light" onclick="logout()">Logout</button>`;
+            } else {
+                nav.innerHTML = `<button class="btn btn-sm btn-outline-light me-2" onclick="openAuthModal(false)">Login</button><button class="btn btn-sm btn-primary" onclick="openAuthModal(true)">Register</button>`;
+            }
+        }
+
+        function openAuthModal(registerMode) {
+            isRegisterMode = registerMode;
+            document.getElementById("authModalTitle").innerText = registerMode ? "Register Account" : "Login";
+            document.getElementById("authSubmitBtn").innerText = registerMode ? "Register" : "Login";
+            document.getElementById("authToggleText").innerHTML = registerMode ? 'Already have an account? <a href="#" onclick="toggleAuthMode(false)">Login here</a>' : 'Don\'t have an account? <a href="#" onclick="toggleAuthMode(true)">Register here</a>';
+            authModalObj.show();
+        }
+
+        function toggleAuthMode(registerMode) { openAuthModal(registerMode); }
+
+        document.getElementById("authForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const username = document.getElementById("authUsername").value;
+            const password = document.getElementById("authPassword").value;
+            const endpoint = isRegisterMode ? `${AUTH_URL}/register` : `${AUTH_URL}/login`;
+
+            try {
+                const res = await fetch(endpoint, {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({ username, password })
+                });
+
+                if (res.ok) {
+                    if (isRegisterMode) {
+                        alert("Registration successful! Please log in.");
+                        openAuthModal(false);
+                    } else {
+                        const data = await res.json();
+                        localStorage.setItem("jwtToken", data.token);
+                        localStorage.setItem("username", data.username);
+                        authModalObj.hide();
+                        updateAuthNav();
+                        fetchTasks();
+                    }
+                } else {
+                    alert("Authentication Error: " + (await res.text()));
+                }
+            } catch (err) {
+                alert("Failed to connect to server.");
+            }
+        });
+
+        function logout() {
+            localStorage.removeItem("jwtToken");
+            localStorage.removeItem("username");
+            updateAuthNav();
+            fetchTasks();
+        }
+
+        async function fetchTasks() {
+            try {
+                const res = await fetch(API_URL, { headers: getAuthHeader() });
+                allTasks = await res.json();
+                renderTasks();
+                updateCharts();
+            } catch (err) {
+                console.error(err);
+            }
+        }
+
+        async function updateCharts() {
+            try {
+                const res = await fetch(`${API_URL}/stats`, { headers: getAuthHeader() });
+                const stats = await res.json();
+
+                const ctxStatus = document.getElementById('statusChart').getContext('2d');
+                if (statusChart) statusChart.destroy();
+                statusChart = new Chart(ctxStatus, {
+                    type: 'pie',
+                    data: { labels: ['Pending', 'Completed'], datasets: [{ data: [stats.pending || 0, stats.completed || 0], backgroundColor: ['#ffc107', '#198754'] }] },
+                    options: { responsive: true, maintainAspectRatio: false }
+                });
+
+                const ctxPriority = document.getElementById('priorityChart').getContext('2d');
+                if (priorityChart) priorityChart.destroy();
+                priorityChart = new Chart(ctxPriority, {
+                    type: 'bar',
+                    data: { labels: ['High', 'Medium', 'Low'], datasets: [{ label: 'Tasks', data: [stats.highPriority || 0, stats.mediumPriority || 0, stats.lowPriority || 0], backgroundColor: ['#dc3545', '#ffc107', '#6c757d'] }] },
+                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
+                });
+            } catch (err) { console.error(err); }
+        }
+
+        function getDueDateBadge(dueDate) {
+            if (!dueDate) return '';
+            const today = new Date().toISOString().split('T')[0];
+            if (dueDate < today) return `<span class="badge bg-danger ms-1">Overdue: ${dueDate}</span>`;
+            if (dueDate === today) return `<span class="badge bg-warning text-dark ms-1">Due Today</span>`;
+            return `<small class="text-muted ms-1">Due: ${dueDate}</small>`;
+        }
+
+        function renderTasks() {
+            const categoryFilter = document.getElementById("categoryFilter").value;
+            const query = document.getElementById("searchInput").value.toLowerCase();
+
+            ['TODO', 'IN_PROGRESS', 'COMPLETED'].forEach(col => document.getElementById(`col-${col}`).innerHTML = '');
+
+            let filtered = allTasks.filter(task => {
+                const matchesCat = categoryFilter === 'ALL' ? true : task.category === categoryFilter;
+                const matchesSearch = task.title.toLowerCase().includes(query) || (task.description && task.description.toLowerCase().includes(query));
+                return matchesCat && matchesSearch;
+            });
+
+            filtered.forEach(task => {
+                const status = task.status || (task.completed ? 'COMPLETED' : 'TODO');
+                const badgeColor = task.priority === 'HIGH' ? 'bg-danger' : task.priority === 'MEDIUM' ? 'bg-warning text-dark' : 'bg-secondary';
+
+                let progressHtml = '';
+                if (task.subTasks && task.subTasks.length > 0) {
+                    const total = task.subTasks.length;
+                    const done = task.subTasks.filter(s => s.completed).length;
+                    const percent = Math.round((done / total) * 100);
+                    progressHtml = `<div class="progress mt-2" style="height: 12px;"><div class="progress-bar bg-info" style="width: ${percent}%;">${done}/${total}</div></div>`;
+                }
+
+                const cardHtml = `
+                    <div class="card p-2 mb-2 shadow-sm kanban-card" draggable="true" ondragstart="drag(event, ${task.id})">
+                        <div class="d-flex justify-content-between align-items-start">
+                            <span class="fw-bold">${task.title}</span>
+                            <span class="badge bg-primary">${task.category || 'General'}</span>
+                        </div>
+                        <div class="mt-1"><span class="badge ${badgeColor}">${task.priority}</span>${getDueDateBadge(task.dueDate)}</div>
+                        ${progressHtml}
+                        <div class="mt-2 text-end">
+                            <button onclick="generateAiSubtasks(${task.id}, event)" class="btn btn-sm btn-outline-warning p-1 me-1" style="font-size: 11px;">✨ AI</button>
+                            <button onclick="deleteTask(${task.id})" class="btn btn-sm btn-outline-danger p-1" style="font-size: 11px;">🗑️</button>
+                        </div>
+                    </div>
+                `;
+
+                const targetCol = document.getElementById(`col-${status}`);
+                if (targetCol) targetCol.innerHTML += cardHtml;
+            });
+        }
+
+        function allowDrop(ev) { ev.preventDefault(); }
+        function drag(ev, id) { ev.dataTransfer.setData("taskId", id); }
+        async function drop(ev, newStatus) {
+            ev.preventDefault();
+            const id = ev.dataTransfer.getData("taskId");
+            await fetch(`${API_URL}/${id}/status`, {
+                method: "PATCH",
+                headers: { "Content-Type": "application/json", ...getAuthHeader() },
+                body: JSON.stringify({ status: newStatus })
+            });
+            fetchTasks();
+        }
+
+        document.getElementById("taskForm").addEventListener("submit", async (e) => {
+            e.preventDefault();
+            const title = document.getElementById("title").value;
+            const category = document.getElementById("category").value;
+            const priority = document.getElementById("priority").value;
+            const dueDate = document.getElementById("dueDate").value;
+            const description = document.getElementById("description").value;
+
+            await fetch(API_URL, {
+                method: "POST",
+                headers: { "Content-Type": "application/json", ...getAuthHeader() },
+                body: JSON.stringify({ title, category, priority, dueDate, description, status: "TODO", completed: false })
+            });
+
+            document.getElementById("taskForm").reset();
+            fetchTasks();
+        });
+
+        async function generateAiSubtasks(id, evt) {
+            const button = evt.target;
+            button.innerText = "⏳...";
+            button.disabled = true;
+            try {
+                const res = await fetch(`${API_URL}/${id}/generate-subtasks`, { method: "POST", headers: getAuthHeader() });
+                if (res.ok) fetchTasks();
+            } finally {
+                button.innerText = "✨ AI";
+                button.disabled = false;
+            }
+        }
+
+        async function deleteTask(id) {
+            await fetch(`${API_URL}/${id}`, { method: "DELETE", headers: getAuthHeader() });
+            fetchTasks();
+        }
+    </script>
+</body>
+</html>
