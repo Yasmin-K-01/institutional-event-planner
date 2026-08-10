@@ -4,6 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.info.Info;
+import java.net.URI;
 
 @SpringBootApplication
 @OpenAPIDefinition(
@@ -16,6 +17,57 @@ import io.swagger.v3.oas.annotations.info.Info;
 public class TaskmanagerApplication {
 
     public static void main(String[] args) {
+        configureDatabaseProperties();
         SpringApplication.run(TaskmanagerApplication.class, args);
+    }
+
+    private static void configureDatabaseProperties() {
+        String dbUrl = System.getenv("DB_URL");
+        String dbUsername = System.getenv("DB_USERNAME");
+        String dbPassword = System.getenv("DB_PASSWORD");
+        if (dbUrl != null && !dbUrl.isBlank() && dbUsername != null && !dbUsername.isBlank() && dbPassword != null && !dbPassword.isBlank()) {
+            return;
+        }
+
+        String databaseUrl = System.getenv("DATABASE_URL");
+        if (databaseUrl == null || databaseUrl.isBlank()) {
+            return;
+        }
+
+        try {
+            URI uri = new URI(databaseUrl);
+            String scheme = uri.getScheme();
+            if (!"postgres".equalsIgnoreCase(scheme) && !"postgresql".equalsIgnoreCase(scheme)) {
+                return;
+            }
+
+            String userInfo = uri.getUserInfo();
+            if (userInfo != null && !userInfo.isBlank()) {
+                String[] parts = userInfo.split(":", 2);
+                if (parts.length >= 1 && (dbUsername == null || dbUsername.isBlank())) {
+                    System.setProperty("spring.datasource.username", parts[0]);
+                }
+                if (parts.length == 2 && (dbPassword == null || dbPassword.isBlank())) {
+                    System.setProperty("spring.datasource.password", parts[1]);
+                }
+            }
+
+            String host = uri.getHost();
+            int port = uri.getPort() == -1 ? 5432 : uri.getPort();
+            String database = uri.getPath();
+            if (database != null && database.startsWith("/")) {
+                database = database.substring(1);
+            }
+            String jdbcUrl = "jdbc:postgresql://" + host + ":" + port + "/" + database;
+            String query = uri.getQuery();
+            if (query != null && !query.isBlank()) {
+                jdbcUrl += "?" + query;
+            }
+
+            System.setProperty("spring.datasource.url", jdbcUrl);
+            System.setProperty("spring.datasource.driver-class-name", "org.postgresql.Driver");
+        } catch (Exception ignored) {
+            // If parsing fails, let Spring fall back to environment variables or fail cleanly.
+        }
     }
 }
