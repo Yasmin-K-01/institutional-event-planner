@@ -1,5 +1,6 @@
 package com.example.taskmanager.model;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.*;
 import java.time.LocalDate;
 import java.util.ArrayList;
@@ -13,42 +14,31 @@ public class Task {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
     private String title;
-
     private String description;
 
     @Enumerated(EnumType.STRING)
     private Priority priority;
 
     private LocalDate dueDate;
+    private boolean completed;
+    private String category;
+    private String status;
 
-    private boolean completed = false;
-
-    private String category; // Feature 1: Categories / Tags (e.g. Work, College, Personal)
-
-    private String status = "TODO"; // Feature 3: Kanban status (TODO, IN_PROGRESS, COMPLETED)
+    @ManyToOne(fetch = FetchType.EAGER)
+    @JoinColumn(name = "user_id")
+    @JsonIgnoreProperties({"password", "tasks", "authorities"})
+    private User user;
 
     @OneToMany(mappedBy = "task", cascade = CascadeType.ALL, orphanRemoval = true)
     private List<SubTask> subTasks = new ArrayList<>();
 
-    @ManyToOne
-    @JoinColumn(name = "user_id")
-    private User user;
+    public enum Priority {
+        LOW, MEDIUM, HIGH
+    }
 
     public Task() {}
 
-    public Task(String title, String description, Priority priority, LocalDate dueDate, boolean completed, String category, String status) {
-        this.title = title;
-        this.description = description;
-        this.priority = priority;
-        this.dueDate = dueDate;
-        this.completed = completed;
-        this.category = category;
-        this.status = status;
-    }
-
-    // Getters and Setters
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -73,9 +63,9 @@ public class Task {
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
 
-    public List<SubTask> getSubTasks() { return subTasks; }
-    public void setSubTasks(List<SubTask> subTasks) { this.subTasks = subTasks; }
-
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }
+
+    public List<SubTask> getSubTasks() { return subTasks; }
+    public void setSubTasks(List<SubTask> subTasks) { this.subTasks = subTasks; }
 }

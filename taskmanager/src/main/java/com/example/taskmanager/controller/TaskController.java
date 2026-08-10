@@ -24,6 +24,7 @@ import java.io.ByteArrayOutputStream;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @RestController
 @RequestMapping("/api/tasks")
@@ -52,10 +53,18 @@ public class TaskController {
     @GetMapping
     public List<Task> getAllTasks() {
         String username = getCurrentUsername();
-        if ("anonymousUser".equals(username)) {
+        
+        // Admin அல்லது Anonymous user ஆக இருந்தால் அனைத்து பயனர்களின் Tasks-யும் காண்பிக்கப்படும்
+        if ("anonymousUser".equalsIgnoreCase(username) || "admin".equalsIgnoreCase(username)) {
             return taskRepository.findAll();
         }
-        return taskRepository.findByUserUsername(username);
+        
+        // சாதாரண பயனர்களுக்கு: அவர்களின் சொந்த Tasks + Admin உருவாக்கிய Tasks
+        return taskRepository.findAll().stream()
+                .filter(t -> t.getUser() == null || 
+                        "admin".equalsIgnoreCase(t.getUser().getUsername()) || 
+                        username.equalsIgnoreCase(t.getUser().getUsername()))
+                .collect(Collectors.toList());
     }
 
     @GetMapping("/stats")
@@ -84,7 +93,7 @@ public class TaskController {
     @PostMapping
     public Task createTask(@RequestBody Task task) {
         String username = getCurrentUsername();
-        if (!"anonymousUser".equals(username)) {
+        if (!"anonymousUser".equalsIgnoreCase(username)) {
             User user = userRepository.findByUsername(username).orElse(null);
             task.setUser(user);
         }
@@ -97,14 +106,12 @@ public class TaskController {
         
         Task saved = taskRepository.save(task);
 
-        // Feature 5: Email Notification on task creation
         emailService.sendTaskNotification(username, "New Task Created: " + saved.getTitle(), 
                 "Hello " + username + ",\nYour task '" + saved.getTitle() + "' was successfully created.");
 
         return saved;
     }
 
-    // Feature 3: Drag & Drop status update (TODO, IN_PROGRESS, COMPLETED)
     @PatchMapping("/{id}/status")
     public ResponseEntity<Task> updateTaskStatus(@PathVariable Long id, @RequestBody Map<String, String> payload) {
         String newStatus = payload.get("status");
