@@ -448,7 +448,7 @@
     <!-- 2. DASHBOARD VIEW -->
     <div id="dashboardView" class="container dashboard-container">
         
-        <!-- Admin Special Banner (Only visible to Admin) -->
+        <!-- Admin Special Banner -->
         <div id="adminBanner" class="glass-panel" style="padding: 15px 20px; margin-bottom: 25px; border-left: 5px solid #8b5cf6; display: none;">
             <div style="display: flex; justify-content: space-between; align-items: center;">
                 <div>
@@ -605,8 +605,8 @@
                 <button type="button" class="btn" style="background: transparent; border: none; font-size: 1.1rem; cursor: pointer;" onclick="closeModal('loginModal')">&times;</button>
             </div>
             <form id="loginForm">
-                <label style="font-size: 0.75rem; font-weight: 700;">Username or Email (Type 'admin' for Admin Dashboard)</label>
-                <input type="text" id="loginUser" class="form-control" placeholder="Enter username (e.g. admin)" required>
+                <label style="font-size: 0.75rem; font-weight: 700;">Username (Type 'admin' for Admin Dashboard)</label>
+                <input type="text" id="loginUser" class="form-control" placeholder="Enter username (e.g. admin or student1)" required>
                 <label style="font-size: 0.75rem; font-weight: 700;">Password</label>
                 <input type="password" id="loginPass" class="form-control" placeholder="••••••••" required>
                 <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 10px;">Sign In</button>
@@ -634,12 +634,17 @@
     </div>
 
     <script>
-        let schedules = [
+        // Default LocalStorage persistence implementation
+        const defaultSchedules = [
             { id: 1, title: 'Global Platform Announcement', dueDate: '2026-08-10', startTime: '08:00', endTime: '09:30', category: 'Study', priority: 'High', status: 'Completed', role: 'admin', createdBy: 'Admin' },
-            { id: 2, title: 'PS PORTAL Task', dueDate: '2026-08-12', startTime: '10:00', endTime: '12:00', category: 'College', priority: 'Medium', status: 'In Progress', role: 'student', createdBy: 'John' },
-            { id: 3, title: 'Linkedin Profile Setup', dueDate: '2026-08-12', startTime: '09:00', endTime: '10:30', category: 'College', priority: 'Medium', status: 'In Progress', role: 'student', createdBy: 'John' },
-            { id: 4, title: 'Hackathon Prep Guidelines', dueDate: '2026-08-15', startTime: '14:00', endTime: '17:00', category: 'Project', priority: 'High', status: 'Planned', role: 'admin', createdBy: 'Admin' }
+            { id: 2, title: 'PS PORTAL Task', dueDate: '2026-08-12', startTime: '10:00', endTime: '12:00', category: 'College', priority: 'Medium', status: 'In Progress', role: 'student', createdBy: 'John' }
         ];
+
+        let schedules = JSON.parse(localStorage.getItem('taskflow_schedules')) || defaultSchedules;
+
+        function saveSchedules() {
+            localStorage.setItem('taskflow_schedules', JSON.stringify(schedules));
+        }
 
         let currentDate = new Date(2026, 7, 1);
         let statusChartInstance = null;
@@ -684,7 +689,6 @@
                 let displayName = role === 'admin' ? `👑 Admin (${user})` : user;
                 document.getElementById('loggedUsername').innerHTML = `<i class="fa-solid fa-user-circle me-1"></i> ${displayName}`;
                 
-                // Toggle Admin UI banner
                 if (role === 'admin') {
                     document.getElementById('adminBanner').style.display = 'block';
                     document.getElementById('formTitleText').innerText = "Assign Global Task (Admin)";
@@ -738,15 +742,15 @@
             document.body.classList.toggle("dark-glass");
         }
 
-        // Visibility Rule Filter Function
+        // Strict Visibility Rules Filter Function
         function getFilteredSchedules() {
             const currentUser = localStorage.getItem('taskflow_user') || 'Guest';
             const currentRole = localStorage.getItem('taskflow_role') || 'student';
 
             if (currentRole === 'admin') {
-                return schedules; // Admin sees everything
+                return schedules; // Admin sees ALL tasks (Admin + all students)
             } else {
-                // Students see: 1. Admin assigned tasks (role === 'admin'), 2. Their own created tasks
+                // Students see: 1. Admin assigned tasks (role === 'admin'), 2. Their OWN tasks (createdBy === currentUser)
                 return schedules.filter(s => s.role === 'admin' || s.createdBy === currentUser);
             }
         }
@@ -770,6 +774,7 @@
             };
 
             schedules.push(newLog);
+            saveSchedules(); // Save to localStorage
             document.getElementById("taskDesc").value = "";
             updateAllViews();
         });
@@ -903,12 +908,14 @@
                 if (item.status === 'In Progress') item.status = 'Completed';
                 else if (item.status === 'Completed') item.status = 'Planned';
                 else item.status = 'In Progress';
+                saveSchedules();
                 updateAllViews();
             }
         }
 
         function deleteSchedule(id) {
             schedules = schedules.filter(s => s.id !== id);
+            saveSchedules();
             updateAllViews();
         }
     </script>
