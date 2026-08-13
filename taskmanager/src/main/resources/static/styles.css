@@ -172,3 +172,92 @@ canvas {
 html {
     scroll-behavior: smooth;
 }
+
+body {
+  margin: 0;
+  height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  background: radial-gradient(circle at center, #1b2947 0%, #0b1329 100%);
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+  transition: background 0.5s ease;
+}
+
+/* Container & Toggle Base */
+.toggle-container {
+  position: relative;
+}
+
+.toggle-input {
+  display: none;
+}
+
+.toggle-track {
+  display: block;
+  width: 220px;
+  height: 90px;
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 50px;
+  cursor: pointer;
+  position: relative;
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5), inset 0 2px 4px rgba(255, 255, 255, 0.1);
+  overflow: hidden;
+  transition: background 0.5s ease;
+}
+
+/* Internal Track Scenery */
+.toggle-content {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0 25px;
+  box-sizing: border-box;
+  z-index: 1;
+}
+
+.moon-icon, .sun-icon {
+  font-size: 24px;
+  opacity: 0.6;
+  transition: opacity 0.3s ease;
+}
+
+/* Sliding Thumb (Orb) */
+.toggle-thumb {
+  position: absolute;
+  top: 8px;
+  left: 8px;
+  width: 74px;
+  height: 74px;
+  background: #ffffff;
+  border-radius: 50%;
+  box-shadow: 0 4px 20px rgba(255, 255, 255, 0.6), 0 0 15px rgba(255, 255, 255, 0.4);
+  transition: transform 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55), background 0.4s ease;
+  z-index: 2;
+}
+
+/* Checked State (Day Mode / Light Mode active) */
+.toggle-input:checked + .toggle-track {
+  background: rgba(135, 206, 235, 0.15);
+  border-color: rgba(135, 206, 235, 0.3);
+}
+
+.toggle-input:checked + .toggle-track .toggle-thumb {
+  transform: translateX(130px);
+  background: #fffaed;
+  box-shadow: 0 4px 25px rgba(255, 221, 105, 0.8), 0 0 20px rgba(255, 255, 255, 0.8);
+}
+
+.toggle-input:checked + .toggle-track .sun-icon {
+  opacity: 1;
+}
+
+.toggle-input:not(:checked) + .toggle-track .moon-icon {
+  opacity: 1;
+}
