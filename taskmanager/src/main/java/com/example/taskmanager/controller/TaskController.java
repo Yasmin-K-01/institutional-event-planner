@@ -7,9 +7,12 @@ import com.example.taskmanager.repository.TaskRepository;
 import com.example.taskmanager.repository.UserRepository;
 import com.example.taskmanager.service.AIService;
 import com.example.taskmanager.service.EmailService;
+
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
@@ -201,4 +204,17 @@ public class TaskController {
                 .headers(headers)
                 .body(out.toByteArray());
     }
+
+    @Autowired
+private SimpMessagingTemplate messagingTemplate;
+
+@PostMapping("/assign")
+public Task assignTask(@RequestBody Task task) {
+    Task savedTask = taskRepository.save(task);
+    
+    // Live-a admin portal-ku broadcast panrathu
+    messagingTemplate.convertAndSend("/topic/admin-tasks", savedTask);
+    
+    return savedTask;
+}
 }

@@ -3,432 +3,1212 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Smart Task Manager Dashboard & Admin Portal</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <title>ELITE_SCHEDULE</title>
+    
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome Icons -->
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- jsPDF for Admin Export PDF -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
     <style>
-        body.dark-mode { background-color: #121212 !important; color: #e0e0e0 !important; }
-        body.dark-mode .card, body.dark-mode .modal-content, body.dark-mode .table { background-color: #1e1e1e !important; color: #e0e0e0 !important; border-color: #333 !important; }
-        body.dark-mode .list-group-item { background-color: #252525 !important; color: #e0e0e0 !important; border-color: #333 !important; }
-        .kanban-col { min-height: 250px; background-color: rgba(0,0,0,0.03); border-radius: 8px; padding: 10px; }
-        body.dark-mode .kanban-col { background-color: rgba(255,255,255,0.05); }
-        .kanban-card { cursor: grab; }
-        .user-badge { background-color: #0d6efd; color: #ffffff; font-size: 11px; font-weight: 600; padding: 3px 8px; border-radius: 12px; }
+        :root {
+            --primary-blue: #0066ff;
+            --bg-main: #0b0f19;
+            --glass-bg: rgba(17, 24, 39, 0.7);
+            --glass-border: rgba(255, 255, 255, 0.08);
+            --text-main: #f3f4f6;
+            --text-muted: #9ca3af;
+        }
+
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            margin: 0;
+            padding: 0;
+            min-height: 100vh;
+        }
+
+        body:not(.dark-glass) {
+            --bg-main: #f8fafc;
+            --glass-bg: rgba(255, 255, 255, 0.85);
+            --glass-border: rgba(0, 0, 0, 0.08);
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+        }
+
+        .container { max-width: 1200px; margin: 0 auto; padding: 0 20px; }
+
+        /* Navbar */
+        .navbar {
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--glass-border);
+            padding: 14px 0;
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+        .nav-content { display: flex; justify-content: space-between; align-items: center; }
+        .navbar-brand { font-weight: 800; font-size: 1.25rem; color: var(--text-main); text-decoration: none; display: flex; align-items: center; gap: 8px; }
+
+        /* Toggle Theme Switch */
+        .toggle-container { position: relative; width: 56px; height: 28px; cursor: pointer; }
+        .toggle-input { opacity: 0; width: 0; height: 0; }
+        .toggle-track { position: absolute; cursor: pointer; top: 0; left: 0; right: 0; bottom: 0; background-color: #1e293b; border: 1px solid var(--glass-border); transition: .3s; border-radius: 34px; display: flex; align-items: center; justify-content: space-between; padding: 0 6px; }
+        .toggle-thumb { position: absolute; content: ""; height: 22px; width: 22px; left: 3px; bottom: 2px; background-color: white; transition: .3s; border-radius: 50%; z-index: 2; }
+        .toggle-input:checked + .toggle-track { background-color: #0066ff; }
+        .toggle-input:checked + .toggle-track .toggle-thumb { transform: translateX(28px); }
+        .toggle-track .icon { font-size: 0.85rem; z-index: 1; }
+
+        /* Buttons & Controls */
+        .btn { border-radius: 10px; font-weight: 700; padding: 10px 20px; cursor: pointer; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; border: none; font-size: 0.9rem; }
+        .btn-primary { background: var(--primary-blue); color: #fff; }
+        .btn-primary:hover { opacity: 0.9; transform: translateY(-1px); }
+        .btn-outline-primary { background: transparent; border: 1.5px solid var(--primary-blue); color: var(--primary-blue); }
+        
+        .form-control, .form-select {
+            background: rgba(255, 255, 255, 0.04);
+            border: 1.5px solid var(--glass-border);
+            color: var(--text-main);
+            border-radius: 10px;
+            padding: 10px 14px;
+            width: 100%;
+            font-family: inherit;
+            font-size: 0.9rem;
+            margin-top: 6px;
+            margin-bottom: 14px;
+            box-sizing: border-box;
+        }
+        body:not(.dark-glass) .form-control, body:not(.dark-glass) .form-select { background: rgba(0, 0, 0, 0.02); }
+        .form-control:focus, .form-select:focus { outline: none; border-color: var(--primary-blue); }
+
+        /* Views */
+        #landingView { display: block; padding: 60px 0; }
+        #dashboardView { display: none; padding: 30px 0; }
+        #dashboardView.active { display: block; }
+
+        .hero-panel { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 20px; padding: 40px; text-align: center; backdrop-filter: blur(16px); }
+        .hero-title { font-size: 2.5rem; font-weight: 800; margin-bottom: 16px; }
+        .hero-subtitle { color: var(--text-muted); font-size: 1.1rem; max-width: 700px; margin: 0 auto 30px auto; line-height: 1.6; }
+
+        .feature-cards-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; margin-top: 40px; text-align: left; }
+        .feature-card { background: rgba(255, 255, 255, 0.02); border: 1px solid var(--glass-border); border-radius: 14px; padding: 22px; }
+        .feature-icon { font-size: 1.5rem; color: var(--primary-blue); margin-bottom: 12px; }
+        .feature-title { font-weight: 700; margin-bottom: 8px; font-size: 1rem; }
+        .feature-desc { font-size: 0.85rem; color: var(--text-muted); line-height: 1.5; }
+
+        /* Dashboard Layout */
+        .glass-panel { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 16px; padding: 24px; margin-bottom: 24px; backdrop-filter: blur(14px); }
+        
+        .metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 18px; margin-bottom: 24px; }
+        .metric-card { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 14px; padding: 18px; display: flex; align-items: center; gap: 16px; backdrop-filter: blur(12px); }
+        .metric-icon { width: 44px; height: 44px; border-radius: 12px; background: rgba(0, 102, 255, 0.1); display: flex; align-items: center; justify-content: center; font-size: 1.2rem; }
+
+        .workspace-grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 24px; margin-bottom: 24px; }
+        
+        .chart-container { position: relative; height: 210px; width: 100%; }
+
+        /* Calendar */
+        .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
+        .calendar-day-header { text-align: center; font-weight: 700; font-size: 0.8rem; color: var(--text-muted); padding-bottom: 8px; }
+        .calendar-cell { background: rgba(255, 255, 255, 0.02); border: 1px solid var(--glass-border); border-radius: 10px; min-height: 90px; padding: 8px; position: relative; overflow: hidden; }
+        .calendar-cell.today { border-color: var(--primary-blue); background: rgba(0, 102, 255, 0.05); }
+        .calendar-cell.empty { background: transparent; border: none; min-height: auto; }
+        .day-number { font-weight: 700; font-size: 0.85rem; margin-bottom: 6px; }
+        
+        .cal-task-badge { background: rgba(0, 102, 255, 0.15); border-left: 3px solid var(--primary-blue); padding: 3px 6px; border-radius: 4px; font-size: 0.72px; margin-bottom: 4px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; font-weight: 600; }
+        .cal-task-time { font-size: 0.65rem; color: var(--text-muted); display: block; }
+
+        /* Badges & Pills */
+        .badge { padding: 4px 10px; border-radius: 6px; font-size: 0.75rem; font-weight: 700; display: inline-flex; align-items: center; gap: 4px; }
+        .badge-priority-High { background: rgba(239, 68, 68, 0.15); color: #ef4444; }
+        .badge-priority-Medium { background: rgba(245, 158, 11, 0.15); color: #f59e0b; }
+        .badge-priority-Low { background: rgba(16, 185, 129, 0.15); color: #10b981; }
+        .badge-cat { background: rgba(139, 92, 246, 0.15); color: #8b5cf6; }
+
+        /* Accordion Student Grouping */
+        .student-group-card { background: var(--glass-bg); border: 1px solid var(--glass-border); border-radius: 14px; margin-bottom: 16px; overflow: hidden; }
+        .student-group-header { padding: 16px 20px; display: flex; justify-content: space-between; align-items: center; cursor: pointer; background: rgba(255, 255, 255, 0.02); }
+        .student-group-header:hover { background: rgba(255, 255, 255, 0.04); }
+        .student-tasks-container { display: none; padding: 20px; border-top: 1px solid var(--glass-border); grid-template-columns: repeat(2, 1fr); gap: 16px; }
+        .student-tasks-container.active { display: grid; }
+
+        /* Modals */
+        .glass-modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 2000; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
+        .glass-modal-overlay.active { opacity: 1; pointer-events: auto; }
+        .glass-modal-card { background: var(--bg-main); border: 1.5px solid var(--glass-border); border-radius: 20px; width: 100%; max-width: 440px; padding: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+        .alert-error { background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #ef4444; padding: 10px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 15px; display: none; }
+
+        @media(max-width: 900px) {
+            .metric-grid { grid-template-columns: repeat(2, 1fr); }
+            .workspace-grid { grid-template-columns: 1fr; }
+            .feature-cards-grid { grid-template-columns: 1fr; }
+            .student-tasks-container { grid-template-columns: 1fr; }
+        }
     </style>
 </head>
-<body class="bg-light">
+<body class="dark-glass">
 
-    <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
-        <div class="container">
-            <a class="navbar-brand fw-bold" href="#">Smart Task Manager</a>
-            <div class="d-flex align-items-center">
-                <button class="btn btn-outline-warning me-3 btn-sm" id="themeToggle" onclick="toggleDarkMode()">🌙 Dark Mode</button>
-                <div id="authNav"></div>
+    <!-- Navbar -->
+    <nav class="navbar">
+        <div class="container nav-content">
+            <a class="navbar-brand" href="#" onclick="showHome()">
+                <i class="fa-solid fa-microchip" style="color: var(--primary-blue);"></i>
+                <span>EliteSchedule<span style="color: var(--primary-blue)">.glass</span></span>
+            </a>
+            <div style="display: flex; align-items: center; gap: 18px;">
+                <div class="toggle-container" title="Toggle Day/Night Mode">
+                    <input type="checkbox" id="darkModeToggle" class="toggle-input" onchange="toggleDarkMode()">
+                    <label for="darkModeToggle" class="toggle-track">
+                        <span class="icon moon-icon">🌙</span>
+                        <span class="icon sun-icon">☀️</span>
+                        <div class="toggle-thumb"></div>
+                    </label>
+                </div>
+                
+                <div id="authNavButtons" style="display: flex; gap: 10px;">
+                    <button class="btn btn-outline-primary" style="padding: 8px 16px; font-size: 0.85rem;" onclick="openModal('studentLoginModal')"><i class="fa-solid fa-user-graduate me-1"></i> Student Login</button>
+                    <button class="btn btn-primary" style="background: #8b5cf6 !important; padding: 8px 16px; font-size: 0.85rem;" onclick="openModal('adminLoginModal')"><i class="fa-solid fa-shield-halved me-1"></i> Admin Login</button>
+                </div>
+
+                <div id="userProfileNav" style="display: none; align-items: center; gap: 14px;">
+                    <span class="fw-semibold small text-primary" id="loggedUsername"><i class="fa-solid fa-user-circle me-1"></i> User</span>
+                    <button class="btn btn-primary" style="background: #ef4444 !important; padding: 8px 16px; font-size: 0.85rem;" onclick="logout()">Logout</button>
+                </div>
             </div>
         </div>
     </nav>
 
-    <div class="container py-2" style="max-width: 1000px;">
-        <div class="card p-4 mb-4 shadow-sm">
-            <h5 class="fw-bold mb-3">Add New Task</h5>
-            <form id="taskForm">
-                <div class="row g-3">
-                    <div class="col-md-5">
-                        <input type="text" id="title" class="form-control" placeholder="Task Title" required>
+    <!-- Landing View -->
+    <div id="landingView" class="container hero-section">
+        <div class="hero-panel">
+            <h1 class="hero-title">Smart Multi-Task Hourly Workspace</h1>
+            <p class="hero-subtitle">Log multiple tasks throughout your day. Students accumulate 8+ total hours daily, while administrators manage and assign tasks flexibly without 8-hour constraints.</p>
+            
+            <div style="display: flex; justify-content: center; gap: 16px; margin-bottom: 28px; flex-wrap: wrap;">
+                <button class="btn btn-primary" style="padding: 14px 28px; font-size: 1rem;" onclick="openModal('studentLoginModal')">
+                    <i class="fa-solid fa-user-graduate me-2"></i> Student Login / Portal
+                </button>
+                <button class="btn btn-outline-primary" style="background: rgba(139, 92, 246, 0.1); border-color: #8b5cf6; color: #8b5cf6; padding: 14px 28px; font-size: 1rem;" onclick="openModal('adminLoginModal')">
+                    <i class="fa-solid fa-shield-halved me-2"></i> Admin Secure Login
+                </button>
+            </div>
+
+            <div class="feature-cards-grid">
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fa-solid fa-code"></i></div>
+                    <div class="feature-title">Multiple Tasks & Labs</div>
+                    <div class="feature-desc">Log individual short tasks (e.g., Git, Python drills, UI design) and accumulate hours naturally.</div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fa-solid fa-business-time"></i></div>
+                    <div class="feature-title">Student 8h Daily Target</div>
+                    <div class="feature-desc">Track student daily progress bars toward the mandatory 8-hour institutional requirement.</div>
+                </div>
+                <div class="feature-card">
+                    <div class="feature-icon"><i class="fa-solid fa-shield-halved"></i></div>
+                    <div class="feature-title">Flexible Admin Portal</div>
+                    <div class="feature-desc">Admins assign tasks and broadcast work items instantly without mandatory 8-hour hour tracking.</div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Dashboard View -->
+    <div id="dashboardView" class="container dashboard-container">
+        
+        <!-- Admin Banner -->
+        <div id="adminBanner" class="glass-panel" style="border-left: 6px solid #8b5cf6; display: none;">
+            <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 18px;">
+                <div>
+                    <h4 style="font-weight: 800; margin: 0; color: #8b5cf6;"><i class="fa-solid fa-shield-halved me-2"></i>Admin Management Portal (No 8h Restriction)</h4>
+                    <p style="margin: 6px 0 0 0; font-size: 0.88rem; color: var(--text-muted);">Assign tasks and broadcast assignments to registered students effortlessly.</p>
+                </div>
+                <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
+                    <input type="text" id="adminSearchInput" class="form-control" placeholder="Search student or task..." style="margin: 0; width: 210px;" oninput="updateAllViews()">
+                    <button class="btn btn-primary" style="background: #8b5cf6 !important; padding: 10px 16px; font-size: 0.85rem;" onclick="openUsersModal()">
+                        <i class="fa-solid fa-users me-1"></i> Registered Students
+                    </button>
+                    <button class="btn btn-primary" style="background: #ef4444 !important; padding: 10px 16px; font-size: 0.85rem;" onclick="exportAdminReportPDF()">
+                        <i class="fa-solid fa-file-pdf me-1"></i> Export PDF Report
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metrics Bar -->
+        <div class="metric-grid">
+            <div class="metric-card">
+                <div class="metric-icon" style="color: #0066ff;"><i class="fa-solid fa-list-check"></i></div>
+                <div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700;">Total Logged Hours</div>
+                    <h4 style="margin: 4px 0 0 0; font-weight: 800;" id="totalLogs">0 hrs</h4>
+                </div>
+            </div>
+            <div class="metric-card" id="goalMetricCard">
+                <div class="metric-icon" style="color: #f59e0b;"><i class="fa-solid fa-business-time"></i></div>
+                <div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700;">Selected Date Total / 8h Goal</div>
+                    <h4 style="margin: 4px 0 0 0; font-weight: 800;" id="dailyCumulativeGoal">0.0 / 8.0 hrs</h4>
+                </div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon" style="color: #10b981;"><i class="fa-solid fa-circle-check"></i></div>
+                <div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700;">Completed Tasks</div>
+                    <h4 style="margin: 4px 0 0 0; font-weight: 800;" id="completedLogs">0</h4>
+                </div>
+            </div>
+            <div class="metric-card">
+                <div class="metric-icon" style="color: #ef4444;"><i class="fa-solid fa-triangle-exclamation"></i></div>
+                <div>
+                    <div style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700;">Overdue Red Alerts</div>
+                    <h4 style="margin: 4px 0 0 0; font-weight: 800;" id="overdueLogs">0</h4>
+                </div>
+            </div>
+        </div>
+
+        <!-- Workspace Grid -->
+        <div class="workspace-grid">
+            <!-- Log Form / Task Assignment Form -->
+            <div class="glass-panel" style="margin-bottom: 0;">
+                <h4 style="font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                    <i class="fa-solid fa-hourglass-half text-primary"></i> <span id="formTitleText">Log Hourly Activity (Multiple Tasks Allowed)</span>
+                </h4>
+                <div id="formErrorMsg" class="alert-error" style="display: none; margin-bottom: 15px;"></div>
+                <form id="hourlyLogForm">
+                    <div style="display: grid; grid-template-columns: 2fr 1fr; gap: 14px;">
+                        <div>
+                            <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700;">Task / Project Description</label>
+                            <input type="text" id="taskDesc" class="form-control" placeholder="e.g., Git Practice, UI Design" required>
+                        </div>
+                        <div>
+                            <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700;">Date</label>
+                            <input type="date" id="taskDate" class="form-control" onchange="updateDailyGoalDisplay()" required>
+                        </div>
                     </div>
-                    <div class="col-md-3">
-                        <select id="category" class="form-select">
-                            <option value="College" selected>College</option>
-                            <option value="Work">Work</option>
-                            <option value="Personal">Personal</option>
-                            <option value="Project">Project</option>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                        <div>
+                            <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700;">Start Time</label>
+                            <input type="time" id="startTime" class="form-control" required>
+                        </div>
+                        <div>
+                            <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700;">End Time</label>
+                            <input type="time" id="endTime" class="form-control" required>
+                        </div>
+                    </div>
+
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 14px;">
+                        <div>
+                            <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700;">Category</label>
+                            <select id="taskCategory" class="form-select">
+                                <option value="college">college</option>
+                                <option value="personal">personal</option>
+                                <option value="academic">academic</option>
+                                <option value="project">project</option>
+                                <option value="sports">sports</option>
+                                <option value="other">other</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700;">Priority</label>
+                            <select id="taskPriority" class="form-select">
+                                <option value="Medium">Medium</option>
+                                <option value="High">High</option>
+                                <option value="Low">Low</option>
+                            </select>
+                        </div>
+                    </div>
+
+                    <!-- Admin Target Assignment Dropdown (Visible only for Admin) -->
+                    <div id="adminAssignContainer" style="display: none; margin-bottom: 15px;">
+                        <label style="font-size: 0.75rem; color: #8b5cf6; font-weight: 700;"><i class="fa-solid fa-paper-plane me-1"></i> Assign Task To Specific Student</label>
+                        <select id="assignStudentTarget" class="form-select" style="border-color: #8b5cf6;">
+                            <option value="ALL">Broadcast to All Students</option>
                         </select>
                     </div>
-                    <div class="col-md-2">
-                        <select id="priority" class="form-select">
-                            <option value="LOW">Low</option>
-                            <option value="MEDIUM" selected>Medium</option>
-                            <option value="HIGH">High</option>
-                        </select>
+
+                    <!-- Daily Goal Status Banner inside form (Hidden for Admin) -->
+                    <div id="dailyGoalStatusBanner" style="padding: 10px 14px; border-radius: 8px; font-size: 0.8rem; margin-bottom: 12px; background: rgba(0, 102, 255, 0.1); color: var(--primary-blue); font-weight: 600; display: flex; justify-content: space-between; align-items: center;">
+                        <span><i class="fa-solid fa-circle-info me-1"></i> <span id="bannerText">Total for selected date: 0.0 hrs (Goal: 8h)</span></span>
+                        <span id="bannerBadge" class="badge" style="background: #f59e0b; color: #fff;">Incomplete</span>
                     </div>
-                    <div class="col-md-2">
-                        <input type="date" id="dueDate" class="form-control">
+
+                    <button type="submit" id="formSubmitBtn" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 4px; padding: 12px;">
+                        <i class="fa-solid fa-plus me-1"></i> Add Activity Task
+                    </button>
+                </form>
+            </div>
+
+            <!-- Charts -->
+            <div class="glass-panel" style="margin-bottom: 0;">
+                <h4 style="font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                    <i class="fa-solid fa-chart-line text-primary"></i> Weekly Progress & Analytics
+                </h4>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 20px; align-items: center;">
+                    <div>
+                        <div style="text-align: center; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-bottom: 8px;">Weekly Hours Graph</div>
+                        <div class="chart-container"><canvas id="weeklyChart"></canvas></div>
                     </div>
-                    <div class="col-md-12">
-                        <input type="text" id="description" class="form-control" placeholder="Description (Optional)">
-                    </div>
-                    <div class="col-md-12">
-                        <button type="submit" class="btn btn-primary w-100">Add Task</button>
+                    <div>
+                        <div style="text-align: center; font-size: 0.75rem; font-weight: 700; color: var(--text-muted); margin-bottom: 8px;">Completion Status</div>
+                        <div class="chart-container"><canvas id="statusChart"></canvas></div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <!-- Calendar Section -->
+        <div class="glass-panel">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h3 style="font-weight: 800; margin: 0;" id="monthYearTitle">August 2026</h3>
+                <div>
+                    <button class="btn btn-outline-primary" style="padding: 6px 14px; font-size: 0.85rem;" onclick="prevMonth()">&lt; Prev</button>
+                    <button class="btn btn-outline-primary" style="padding: 6px 14px; font-size: 0.85rem;" onclick="nextMonth()">Next &gt;</button>
+                </div>
+            </div>
+
+            <div class="calendar-grid" style="margin-bottom: 12px;">
+                <div class="calendar-day-header">Sun</div>
+                <div class="calendar-day-header">Mon</div>
+                <div class="calendar-day-header">Tue</div>
+                <div class="calendar-day-header">Wed</div>
+                <div class="calendar-day-header">Thu</div>
+                <div class="calendar-day-header">Fri</div>
+                <div class="calendar-day-header">Sat</div>
+            </div>
+
+            <div class="calendar-grid" id="calendarDaysGrid"></div>
+        </div>
+
+        <!-- Schedule / Student Grouped Cards Section -->
+        <div style="margin-bottom: 40px;">
+            <h4 style="font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
+                <i class="fa-solid fa-clock-rotate-left text-primary"></i> <span id="scheduleListTitle">Logged Hourly Schedules</span>
+            </h4>
+            <div id="scheduleCardsContainer"></div>
+        </div>
+    </div>
+
+    <!-- Student Login Modal -->
+    <div class="glass-modal-overlay" id="studentLoginModal">
+        <div class="glass-modal-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px;">
+                <h4 style="font-weight: 800; margin: 0; color: var(--primary-blue);"><i class="fa-solid fa-user-graduate me-2"></i>Student Login</h4>
+                <button type="button" class="btn" style="background: transparent; border: none; font-size: 1.2rem; cursor: pointer;" onclick="closeModal('studentLoginModal')">&times;</button>
+            </div>
+            <div id="studentLoginError" class="alert-error"></div>
+            <form id="studentLoginForm">
+                <label style="font-size: 0.75rem; font-weight: 700;">Enter Official Email</label>
+                <input type="email" id="studentLoginEmail" class="form-control" placeholder="Enter official email" required>
+                <label style="font-size: 0.75rem; font-weight: 700;">Password (Fixed Size 8)</label>
+                <input type="password" id="studentLoginPass" class="form-control" minlength="8" maxlength="8" placeholder="8-character password" required>
+                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 10px; padding: 12px;">Sign In as Student</button>
             </form>
-        </div>
-
-        <div class="row mb-4">
-            <div class="col-md-6">
-                <div class="card p-3 shadow-sm h-100">
-                    <h6 class="text-center fw-bold mb-3">Completion Status</h6>
-                    <canvas id="statusChart" style="max-height: 200px;"></canvas>
-                </div>
-            </div>
-            <div class="col-md-6">
-                <div class="card p-3 shadow-sm h-100">
-                    <h6 class="text-center fw-bold mb-3">Priority Distribution</h6>
-                    <canvas id="priorityChart" style="max-height: 200px;"></canvas>
-                </div>
+            <div style="text-align: center; margin-top: 18px; font-size: 0.85rem; color: var(--text-muted);">
+                Don't have an account? <a href="#" onclick="switchModal('studentLoginModal', 'registerModal')" style="color: var(--primary-blue); font-weight: 700; text-decoration: none;">Register here</a>
             </div>
         </div>
+    </div>
 
-        <div class="row g-2 mb-3 align-items-center">
-            <div class="col-md-4">
-                <select id="categoryFilter" class="form-select" onchange="renderTasks()">
-                    <option value="ALL">All Categories</option>
-                    <option value="College">College</option>
-                    <option value="Work">Work</option>
-                    <option value="Personal">Personal</option>
-                    <option value="Project">Project</option>
-                </select>
+    <!-- Student Register Modal -->
+    <div class="glass-modal-overlay" id="registerModal">
+        <div class="glass-modal-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px;">
+                <h4 style="font-weight: 800; margin: 0; color: var(--primary-blue);"><i class="fa-solid fa-user-plus me-2"></i>Student Register</h4>
+                <button type="button" class="btn" style="background: transparent; border: none; font-size: 1.2rem; cursor: pointer;" onclick="closeModal('registerModal')">&times;</button>
             </div>
-            <div class="col-md-5">
-                <input type="text" id="searchInput" class="form-control" placeholder="Search tasks..." onkeyup="renderTasks()">
-            </div>
-            <div class="col-md-3">
-                <a href="http://localhost:8080/api/tasks/export/pdf" class="btn btn-outline-success w-100" target="_blank">📄 Export PDF</a>
+            <div id="registerError" class="alert-error"></div>
+            <form id="registerForm">
+                <label style="font-size: 0.75rem; font-weight: 700;">Full Name</label>
+                <input type="text" id="regName" class="form-control" placeholder="Student Name" required>
+                <label style="font-size: 0.75rem; font-weight: 700;">Enter Official Email</label>
+                <input type="email" id="regEmail" class="form-control" placeholder="Enter official email" required>
+                <label style="font-size: 0.75rem; font-weight: 700;">Password (Fixed Size 8)</label>
+                <input type="password" id="regPass" class="form-control" minlength="8" maxlength="8" placeholder="Exactly 8 characters" required>
+                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 10px; padding: 12px;">Create Account</button>
+            </form>
+            <div style="text-align: center; margin-top: 18px; font-size: 0.85rem; color: var(--text-muted);">
+                Already registered? <a href="#" onclick="switchModal('registerModal', 'studentLoginModal')" style="color: var(--primary-blue); font-weight: 700; text-decoration: none;">Login here</a>
             </div>
         </div>
+    </div>
 
-        <!-- Admin Portal Section -->
-        <div id="adminPortalSection" class="card p-4 mb-4 shadow-sm d-none">
-            <h5 class="fw-bold mb-3 text-dark">🛡️ Admin Portal - All User Tasks Overview</h5>
-            <div class="table-responsive">
-                <table class="table table-hover align-middle">
-                    <thead class="table-dark">
-                        <tr>
-                            <th>Task Title</th>
-                            <th>Created By</th>
-                            <th>Category</th>
-                            <th>Priority</th>
-                            <th>Status</th>
-                            <th>Due Date</th>
-                            <th>Action</th>
+    <!-- Admin Login Modal -->
+    <div class="glass-modal-overlay" id="adminLoginModal">
+        <div class="glass-modal-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px;">
+                <h4 style="font-weight: 800; margin: 0; color: #8b5cf6;"><i class="fa-solid fa-shield-halved me-2"></i>Admin Secure Portal</h4>
+                <button type="button" class="btn" style="background: transparent; border: none; font-size: 1.2rem; cursor: pointer;" onclick="closeModal('adminLoginModal')">&times;</button>
+            </div>
+            <div id="adminLoginError" class="alert-error"></div>
+            <form id="adminLoginForm">
+                <label style="font-size: 0.75rem; font-weight: 700;">Enter username</label>
+                <input type="text" id="adminUser" class="form-control" placeholder="Enter username" required>
+                <label style="font-size: 0.75rem; font-weight: 700;">Admin Password</label>
+                <input type="password" id="adminPass" class="form-control" placeholder="Enter admin password" required>
+                <button type="submit" class="btn btn-primary" style="width: 100%; background: #8b5cf6 !important; justify-content: center; margin-top: 10px; padding: 12px;">Secure Admin Sign In</button>
+            </form>
+            <div style="margin-top: 16px; padding: 10px; background: rgba(139, 92, 246, 0.1); border-radius: 10px; font-size: 0.78rem; color: var(--text-muted); text-align: center;">
+                <i class="fa-solid fa-circle-info me-1"></i> Authorized faculty/admin personnel only.
+            </div>
+        </div>
+    </div>
+
+    <!-- Registered Students List Modal -->
+    <div class="glass-modal-overlay" id="usersListModal">
+        <div class="glass-modal-card" style="max-width: 650px;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
+                <h4 style="font-weight: 800; margin: 0;"><i class="fa-solid fa-users text-primary me-2"></i>Registered Students Database</h4>
+                <button type="button" class="btn" style="background: transparent; border: none; font-size: 1.2rem; cursor: pointer;" onclick="closeModal('usersListModal')">&times;</button>
+            </div>
+            <div id="registeredUsersCountText" style="font-size: 0.88rem; font-weight: 700; color: var(--primary-blue); margin-bottom: 15px;"></div>
+            <div style="max-height: 320px; overflow-y: auto;">
+                <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem;" id="usersTable">
+                    <thead>
+                        <tr style="border-bottom: 2px solid var(--glass-border); text-align: left;">
+                            <th style="padding: 10px;">#</th>
+                            <th style="padding: 10px;">Student Email</th>
+                            <th style="padding: 10px;">Password</th>
+                            <th style="padding: 10px; text-align: right;">Action</th>
                         </tr>
                     </thead>
-                    <tbody id="adminTaskTableBody">
-                    </tbody>
+                    <tbody id="usersTableBody"></tbody>
                 </table>
             </div>
         </div>
-
-        <h5 class="fw-bold mt-4 mb-3">Task Board (Drag & Drop)</h5>
-        <div class="row g-3 mb-5">
-            <div class="col-md-4">
-                <div class="card p-2 shadow-sm">
-                    <h6 class="fw-bold text-center text-primary mb-2">📋 To Do</h6>
-                    <div id="col-TODO" class="kanban-col" ondragover="allowDrop(event)" ondrop="drop(event, 'TODO')"></div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card p-2 shadow-sm">
-                    <h6 class="fw-bold text-center text-warning mb-2">⏳ In Progress</h6>
-                    <div id="col-IN_PROGRESS" class="kanban-col" ondragover="allowDrop(event)" ondrop="drop(event, 'IN_PROGRESS')"></div>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="card p-2 shadow-sm">
-                    <h6 class="fw-bold text-center text-success mb-2">✅ Completed</h6>
-                    <div id="col-COMPLETED" class="kanban-col" ondragover="allowDrop(event)" ondrop="drop(event, 'COMPLETED')"></div>
-                </div>
-            </div>
-        </div>
     </div>
 
-    <div class="modal fade" id="authModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-dialog-centered">
-            <div class="modal-content">
-                <div class="modal-header">
-                    <h5 class="modal-header-title fw-bold" id="authModalTitle">Login</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body">
-                    <form id="authForm">
-                        <div class="mb-3">
-                            <label class="form-label">Username</label>
-                            <input type="text" id="authUsername" class="form-control" required>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Password</label>
-                            <input type="password" id="authPassword" class="form-control" required>
-                        </div>
-                        <button type="submit" class="btn btn-primary w-100" id="authSubmitBtn">Login</button>
-                    </form>
-                    <div class="text-center mt-3">
-                        <small id="authToggleText">Don't have an account? <a href="#" onclick="toggleAuthMode(true)">Register here</a></small>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        const API_URL = (window.location.origin ? window.location.origin : '') + '/api/tasks';
-        const AUTH_URL = (window.location.origin ? window.location.origin : '') + '/api/auth';
-        let allTasks = [];
-        let statusChart, priorityChart;
-        let isRegisterMode = false;
-        let authModalObj;
+        const defaultSchedules = [
+            { id: 1, title: 'IoT Gas Leakage Detector Prototype', dueDate: '2026-08-10', startTime: '09:00', endTime: '17:00', category: 'project', priority: 'High', status: 'Completed', role: 'admin', createdBy: 'Admin', assignedTo: 'ALL' },
+            { id: 2, title: 'Programming Loops & Conditions Drill', dueDate: '2026-08-15', startTime: '09:00', endTime: '13:00', category: 'academic', priority: 'Medium', status: 'In Progress', role: 'student', createdBy: 'student@francisxavier.ac.in', assignedTo: 'student@francisxavier.ac.in' },
+            { id: 3, title: 'git practice & repositories', dueDate: '2026-08-15', startTime: '13:30', endTime: '17:30', category: 'project', priority: 'Medium', status: 'In Progress', role: 'student', createdBy: 'student@francisxavier.ac.in', assignedTo: 'student@francisxavier.ac.in' },
+            { id: 4, title: 'whatsapp integration module', dueDate: '2026-08-13', startTime: '09:00', endTime: '17:00', category: 'project', priority: 'Medium', status: 'In Progress', role: 'student', createdBy: 'student@francisxavier.ac.in', assignedTo: 'student@francisxavier.ac.in' },
+            { id: 5, title: 'sensor testing', dueDate: '2026-08-13', startTime: '09:00', endTime: '17:00', category: 'project', priority: 'Medium', status: 'In Progress', role: 'student', createdBy: 'student@francisxavier.ac.in', assignedTo: 'student@francisxavier.ac.in' }
+        ];
+
+        let schedules = JSON.parse(localStorage.getItem('eliteschedule_schedules_fx')) || defaultSchedules;
+        let registeredUsers = JSON.parse(localStorage.getItem('eliteschedule_users_db_fx')) || {
+            'student@francisxavier.ac.in': '12345678',
+            'yasmink.ug.25.cs@francisxavier.ac.in': '12345678'
+        };
+
+        function saveSchedules() { localStorage.setItem('eliteschedule_schedules_fx', JSON.stringify(schedules)); }
+        function saveUsersDB() { localStorage.setItem('eliteschedule_users_db_fx', JSON.stringify(registeredUsers)); }
+
+        let currentDate = new Date(2026, 7, 1);
+        let statusChartInstance = null;
+        let weeklyChartInstance = null;
 
         document.addEventListener("DOMContentLoaded", () => {
-            authModalObj = new bootstrap.Modal(document.getElementById('authModal'));
-            updateAuthNav();
-            fetchTasks();
+            document.getElementById('taskDate').value = "2026-08-15";
+            document.getElementById('startTime').value = "";
+            document.getElementById('endTime').value = "";
+
+            const isDark = document.body.classList.contains('dark-glass');
+            document.getElementById('darkModeToggle').checked = !isDark;
+
+            checkAuthStatus();
+            initCharts();
+            updateAllViews();
+            updateDailyGoalDisplay();
         });
 
-        function toggleDarkMode() {
-            document.body.classList.toggle("dark-mode");
-            const btn = document.getElementById("themeToggle");
-            btn.innerText = document.body.classList.contains("dark-mode") ? "☀️ Light Mode" : "🌙 Dark Mode";
+        function showHome() {
+            document.getElementById('landingView').style.display = 'block';
+            document.getElementById('dashboardView').classList.remove('active');
         }
 
-        function getAuthHeader() {
-            const token = localStorage.getItem('jwtToken');
-            return token ? { 'Authorization': `Bearer ${token}` } : {};
+        function goToDashboard() {
+            const user = localStorage.getItem('eliteschedule_user_fx');
+            if (user) {
+                document.getElementById('landingView').style.display = 'none';
+                document.getElementById('dashboardView').classList.add('active');
+                updateAllViews();
+                updateDailyGoalDisplay();
+            } else {
+                openModal('studentLoginModal');
+            }
         }
 
-        function updateAuthNav() {
-            const nav = document.getElementById("authNav");
-            const username = localStorage.getItem("username");
-            const adminSection = document.getElementById("adminPortalSection");
+        function openModal(id) { 
+            document.getElementById(id).classList.add('active'); 
+            const errEl = document.getElementById(id.replace('Modal', 'Error'));
+            if(errEl) { errEl.style.display = 'none'; errEl.innerText = ''; }
+        }
+        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+        function switchModal(closeId, openId) { closeModal(closeId); openModal(openId); }
 
-            if (username) {
-                nav.innerHTML = `<span class="text-light me-3">👤 Welcome, <strong>${username}</strong></span><button class="btn btn-sm btn-outline-light" onclick="logout()">Logout</button>`;
-                if (username.trim().toLowerCase() === 'admin') {
-                    if (adminSection) adminSection.classList.remove("d-none");
+        function populateAdminStudentDropdown() {
+            const selectEl = document.getElementById('assignStudentTarget');
+            selectEl.innerHTML = `<option value="ALL">Broadcast to All Students</option>`;
+            Object.keys(registeredUsers).forEach(email => {
+                selectEl.innerHTML += `<option value="${email}">${email}</option>`;
+            });
+        }
+
+        function checkAuthStatus() {
+            const user = localStorage.getItem('eliteschedule_user_fx');
+            const role = localStorage.getItem('eliteschedule_role_fx');
+            
+            if (user) {
+                document.getElementById('authNavButtons').style.display = 'none';
+                document.getElementById('userProfileNav').style.display = 'flex';
+                let displayName = role === 'admin' ? `👑 Admin Portal` : user;
+                document.getElementById('loggedUsername').innerHTML = `<i class="fa-solid fa-user-circle me-1"></i> ${displayName}`;
+                
+                if (role === 'admin') {
+                    document.getElementById('adminBanner').style.display = 'block';
+                    document.getElementById('formTitleText').innerText = "Assign Task to Student(s) (Admin)";
+                    document.getElementById('formSubmitBtn').innerHTML = `<i class="fa-solid fa-paper-plane me-1"></i> Assign Task to Student`;
+                    document.getElementById('adminAssignContainer').style.display = 'block';
+                    document.getElementById('dailyGoalStatusBanner').style.display = 'none';
+                    document.getElementById('goalMetricCard').style.display = 'none';
+                    document.getElementById('scheduleListTitle').innerText = "Student Submissions & Task Progress (Grouped View)";
+                    populateAdminStudentDropdown();
                 } else {
-                    if (adminSection) adminSection.classList.add("d-none");
+                    document.getElementById('adminBanner').style.display = 'none';
+                    document.getElementById('formTitleText').innerText = "Log Hourly Activity (Multiple Tasks Allowed)";
+                    document.getElementById('formSubmitBtn').innerHTML = `<i class="fa-solid fa-plus me-1"></i> Add Activity Task`;
+                    document.getElementById('adminAssignContainer').style.display = 'none';
+                    document.getElementById('dailyGoalStatusBanner').style.display = 'flex';
+                    document.getElementById('goalMetricCard').style.display = 'flex';
+                    document.getElementById('scheduleListTitle').innerText = "Your Logged Schedules & Assigned Tasks";
                 }
             } else {
-                nav.innerHTML = `<button class="btn btn-sm btn-outline-light me-2" onclick="openAuthModal(false)">Login</button><button class="btn btn-sm btn-primary" onclick="openAuthModal(true)">Register</button>`;
-                if (adminSection) adminSection.classList.add("d-none");
+                document.getElementById('authNavButtons').style.display = 'flex';
+                document.getElementById('userProfileNav').style.display = 'none';
+                document.getElementById('adminBanner').style.display = 'none';
             }
         }
 
-        function openAuthModal(registerMode) {
-            isRegisterMode = registerMode;
-            document.getElementById("authModalTitle").innerText = registerMode ? "Register Account" : "Login";
-            document.getElementById("authSubmitBtn").innerText = registerMode ? "Register" : "Login";
-            document.getElementById("authToggleText").innerHTML = registerMode ? 'Already have an account? <a href="#" onclick="toggleAuthMode(false)">Login here</a>' : 'Don\'t have an account? <a href="#" onclick="toggleAuthMode(true)">Register here</a>';
-            authModalObj.show();
-        }
-
-        function toggleAuthMode(registerMode) { openAuthModal(registerMode); }
-
-        document.getElementById("authForm").addEventListener("submit", async (e) => {
+        // Student Login Handler
+        document.getElementById("studentLoginForm").addEventListener("submit", (e) => {
             e.preventDefault();
-            const username = document.getElementById("authUsername").value;
-            const password = document.getElementById("authPassword").value;
-            const endpoint = isRegisterMode ? `${AUTH_URL}/register` : `${AUTH_URL}/login`;
+            const username = document.getElementById("studentLoginEmail").value.trim().toLowerCase();
+            const password = document.getElementById("studentLoginPass").value;
+            const errDiv = document.getElementById("studentLoginError");
 
-            try {
-                const res = await fetch(endpoint, {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ username, password })
-                });
-
-                if (res.ok) {
-                    if (isRegisterMode) {
-                        alert("Registration successful! Please log in.");
-                        openAuthModal(false);
-                    } else {
-                        const data = await res.json();
-                        localStorage.setItem("jwtToken", data.token);
-                        localStorage.setItem("username", data.username);
-                        authModalObj.hide();
-                        updateAuthNav();
-                        fetchTasks();
-                    }
-                } else {
-                    alert("Authentication Error: " + (await res.text()));
-                }
-            } catch (err) {
-                alert("Failed to connect to server.");
+            const fxEmailRegex = /^[a-z0-9._]+\.ug\.\d{2}\.[a-z]+\@francisxavier\.ac\.in$/i;
+            if (!fxEmailRegex.test(username) && username !== 'student@francisxavier.ac.in') {
+                errDiv.innerText = "Incorrect password or invalid email format!";
+                errDiv.style.display = 'block';
+                return;
             }
+
+            if (!registeredUsers[username]) {
+                registeredUsers[username] = password;
+                saveUsersDB();
+            } else if (registeredUsers[username] !== password) {
+                errDiv.innerText = "Incorrect password!";
+                errDiv.style.display = 'block';
+                return;
+            }
+
+            localStorage.setItem('eliteschedule_user_fx', username);
+            localStorage.setItem('eliteschedule_role_fx', 'student');
+            
+            closeModal('studentLoginModal');
+            checkAuthStatus();
+            goToDashboard();
+        });
+
+        // Admin Login Handler
+        document.getElementById("adminLoginForm").addEventListener("submit", (e) => {
+            e.preventDefault();
+            const username = document.getElementById("adminUser").value.trim();
+            const password = document.getElementById("adminPass").value;
+            const errDiv = document.getElementById("adminLoginError");
+
+            if (username.toLowerCase() !== 'admin' && username.toLowerCase() !== 'admin@francisxavier.ac.in') {
+                errDiv.innerText = "Incorrect username or password!";
+                errDiv.style.display = 'block';
+                return;
+            }
+
+            if (password !== 'elite@admin') {
+                errDiv.innerText = "Incorrect password!";
+                errDiv.style.display = 'block';
+                return;
+            }
+
+            localStorage.setItem('eliteschedule_user_fx', username);
+            localStorage.setItem('eliteschedule_role_fx', 'admin');
+            
+            closeModal('adminLoginModal');
+            checkAuthStatus();
+            goToDashboard();
+        });
+
+        // Student Registration Handler
+        document.getElementById("registerForm").addEventListener("submit", (e) => {
+            e.preventDefault();
+            const email = document.getElementById("regEmail").value.trim().toLowerCase();
+            const password = document.getElementById("regPass").value;
+            const errDiv = document.getElementById("registerError");
+            
+            if (password.length !== 8) {
+                errDiv.innerText = "Password must be fixed size 8 characters long.";
+                errDiv.style.display = 'block';
+                return;
+            }
+
+            const fxEmailRegex = /^[a-z0-9._]+\.ug\.\d{2}\.[a-z]+\@francisxavier\.ac\.in$/i;
+            if (!fxEmailRegex.test(email) && email !== 'student@francisxavier.ac.in') {
+                errDiv.innerText = "Email format must match name.ug.25.dept@francisxavier.ac.in.";
+                errDiv.style.display = 'block';
+                return;
+            }
+
+            registeredUsers[email] = password;
+            saveUsersDB();
+
+            localStorage.setItem('eliteschedule_user_fx', email);
+            localStorage.setItem('eliteschedule_role_fx', 'student');
+            
+            closeModal('registerModal');
+            checkAuthStatus();
+            goToDashboard();
         });
 
         function logout() {
-            localStorage.removeItem("jwtToken");
-            localStorage.removeItem("username");
-            const adminSection = document.getElementById("adminPortalSection");
-            if (adminSection) adminSection.classList.add("d-none");
-            updateAuthNav();
-            fetchTasks();
+            localStorage.removeItem('eliteschedule_user_fx');
+            localStorage.removeItem('eliteschedule_role_fx');
+            checkAuthStatus();
+            showHome();
         }
 
-        async function fetchTasks() {
-            try {
-                const res = await fetch(API_URL, { headers: getAuthHeader() });
-                allTasks = await res.json();
-                renderTasks();
-                updateCharts();
-            } catch (err) {
-                console.error(err);
+        function toggleDarkMode() {
+            const isLightChecked = document.getElementById('darkModeToggle').checked;
+            if (isLightChecked) {
+                document.body.classList.remove('dark-glass');
+            } else {
+                document.body.classList.add('dark-glass');
             }
         }
 
-        async function updateCharts() {
-            try {
-                const res = await fetch(`${API_URL}/stats`, { headers: getAuthHeader() });
-                const stats = await res.json();
+        function getFilteredSchedules() {
+            const currentUser = localStorage.getItem('eliteschedule_user_fx') || 'Guest';
+            const currentRole = localStorage.getItem('eliteschedule_role_fx') || 'student';
 
-                const ctxStatus = document.getElementById('statusChart').getContext('2d');
-                if (statusChart) statusChart.destroy();
-                statusChart = new Chart(ctxStatus, {
-                    type: 'pie',
-                    data: { labels: ['Pending', 'Completed'], datasets: [{ data: [stats.pending || 0, stats.completed || 0], backgroundColor: ['#ffc107', '#198754'] }] },
-                    options: { responsive: true, maintainAspectRatio: false }
-                });
-
-                const ctxPriority = document.getElementById('priorityChart').getContext('2d');
-                if (priorityChart) priorityChart.destroy();
-                priorityChart = new Chart(ctxPriority, {
-                    type: 'bar',
-                    data: { labels: ['High', 'Medium', 'Low'], datasets: [{ label: 'Tasks', data: [stats.highPriority || 0, stats.mediumPriority || 0, stats.lowPriority || 0], backgroundColor: ['#dc3545', '#ffc107', '#6c757d'] }] },
-                    options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { stepSize: 1 } } } }
-                });
-            } catch (err) { console.error(err); }
-        }
-
-        function getDueDateBadge(dueDate) {
-            if (!dueDate) return '';
-            const today = new Date().toISOString().split('T')[0];
-            if (dueDate < today) return `<span class="badge bg-danger ms-1">Overdue: ${dueDate}</span>`;
-            if (dueDate === today) return `<span class="badge bg-warning text-dark ms-1">Due Today</span>`;
-            return `<small class="text-muted ms-1">Due: ${dueDate}</small>`;
-        }
-
-        function getOwnerName(task) {
-            if (task && task.user && task.user.username) {
-                return task.user.username;
+            if (currentRole === 'admin') {
+                return schedules; 
+            } else {
+                return schedules.filter(s => s.createdBy === currentUser || s.assignedTo === currentUser || s.assignedTo === 'ALL');
             }
-            return "admin";
         }
 
-        function renderTasks() {
-            const categoryFilter = document.getElementById("categoryFilter").value;
-            const query = document.getElementById("searchInput").value.toLowerCase();
+        function calculateHours(start, end) {
+            const [sh, sm] = start.split(':').map(Number);
+            const [eh, em] = end.split(':').map(Number);
+            let diff = (eh * 60 + em) - (sh * 60 + sm);
+            if (diff < 0) diff += 24 * 60;
+            return diff / 60;
+        }
 
-            ['TODO', 'IN_PROGRESS', 'COMPLETED'].forEach(col => document.getElementById(`col-${col}`).innerHTML = '');
-            const adminTableBody = document.getElementById("adminTaskTableBody");
-            if (adminTableBody) adminTableBody.innerHTML = '';
+        function updateDailyGoalDisplay() {
+            const currentRole = localStorage.getItem('eliteschedule_role_fx') || 'student';
+            if (currentRole === 'admin') return; // Skip for admin
 
-            let filtered = allTasks.filter(task => {
-                const matchesCat = categoryFilter === 'ALL' ? true : task.category === categoryFilter;
-                const matchesSearch = task.title.toLowerCase().includes(query) || (task.description && task.description.toLowerCase().includes(query));
-                return matchesCat && matchesSearch;
+            const selectedDate = document.getElementById("taskDate").value;
+            const currentUser = localStorage.getItem('eliteschedule_user_fx') || 'Student';
+            
+            const userSchedules = schedules.filter(s => s.dueDate === selectedDate && (s.createdBy === currentUser || s.assignedTo === currentUser || s.assignedTo === 'ALL'));
+            const totalDateHours = userSchedules.reduce((acc, curr) => acc + (curr.hours || calculateHours(curr.startTime, curr.endTime)), 0);
+
+            document.getElementById("dailyCumulativeGoal").innerText = `${totalDateHours.toFixed(1)} / 8.0 hrs`;
+            
+            const bannerText = document.getElementById("bannerText");
+            const bannerBadge = document.getElementById("bannerBadge");
+            const banner = document.getElementById("dailyGoalStatusBanner");
+
+            if (totalDateHours >= 8) {
+                bannerText.innerText = `Date ${selectedDate} goal met! Total: ${totalDateHours.toFixed(1)} hrs (>= 8h fulfilled)`;
+                bannerBadge.innerText = "Goal Met 🌟";
+                bannerBadge.style.background = "#10b981";
+                banner.style.background = "rgba(16, 185, 129, 0.1)";
+                banner.style.color = "#10b981";
+            } else {
+                let remaining = (8 - totalDateHours).toFixed(1);
+                bannerText.innerText = `Date ${selectedDate}: ${totalDateHours.toFixed(1)} hrs logged. Need ${remaining}h more to reach 8h daily target.`;
+                bannerBadge.innerText = "Incomplete";
+                bannerBadge.style.background = "#f59e0b";
+                banner.style.background = "rgba(0, 102, 255, 0.1)";
+                banner.style.color = "var(--primary-blue)";
+            }
+        }
+
+        document.getElementById("hourlyLogForm").addEventListener("submit", (e) => {
+            e.preventDefault();
+            const errBox = document.getElementById("formErrorMsg");
+            errBox.style.display = 'none';
+            errBox.innerText = "";
+
+            const startTime = document.getElementById("startTime").value;
+            const endTime = document.getElementById("endTime").value;
+            const taskHours = calculateHours(startTime, endTime);
+
+            if (taskHours <= 0) {
+                errBox.innerText = "End time must be after start time!";
+                errBox.style.display = 'block';
+                return;
+            }
+
+            const currentUser = localStorage.getItem('eliteschedule_user_fx') || 'Student';
+            const currentRole = localStorage.getItem('eliteschedule_role_fx') || 'student';
+
+            let assignedToUser = currentUser;
+            let roleType = currentRole;
+
+            if (currentRole === 'admin') {
+                roleType = 'admin';
+                assignedToUser = document.getElementById("assignStudentTarget").value;
+            }
+
+            const newLog = {
+                id: Date.now(),
+                title: document.getElementById("taskDesc").value,
+                dueDate: document.getElementById("taskDate").value,
+                startTime: startTime,
+                endTime: endTime,
+                hours: taskHours,
+                category: document.getElementById("taskCategory").value,
+                priority: document.getElementById("taskPriority").value,
+                status: 'In Progress',
+                role: roleType,
+                createdBy: currentUser,
+                assignedTo: assignedToUser
+            };
+
+            schedules.push(newLog);
+            saveSchedules();
+            document.getElementById("taskDesc").value = "";
+            document.getElementById("startTime").value = "";
+            document.getElementById("endTime").value = "";
+            updateAllViews();
+            updateDailyGoalDisplay();
+        });
+
+        function updateAllViews() {
+            renderMetrics();
+            renderCharts();
+            renderCalendar();
+            renderScheduleCards();
+            updateDailyGoalDisplay();
+        }
+
+        function renderMetrics() {
+            const data = getFilteredSchedules();
+            const totalHours = data.reduce((acc, curr) => acc + (curr.hours || calculateHours(curr.startTime, curr.endTime)), 0);
+            
+            document.getElementById("totalLogs").innerText = `${totalHours.toFixed(1)} hrs`;
+            document.getElementById("completedLogs").innerText = data.filter(s => s.status === 'Completed').length;
+            
+            const todayStr = "2026-08-15";
+            const overdueCount = data.filter(s => s.dueDate < todayStr && s.status !== 'Completed').length;
+            document.getElementById("overdueLogs").innerText = overdueCount;
+        }
+
+        function initCharts() {
+            const ctxWeekly = document.getElementById('weeklyChart').getContext('2d');
+            weeklyChartInstance = new Chart(ctxWeekly, {
+                type: 'line',
+                data: {
+                    labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+                    datasets: [{
+                        label: 'Hours Logged',
+                        data: [0, 0, 0, 0, 0, 0, 0],
+                        borderColor: '#0066ff',
+                        backgroundColor: 'rgba(0, 102, 255, 0.1)',
+                        fill: true,
+                        tension: 0.3
+                    }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { display: false } }, scales: { y: { beginAtZero: true, ticks: { font: { size: 11 } } }, x: { ticks: { font: { size: 11 } } } } }
             });
 
-            filtered.forEach(task => {
-                const status = task.status || (task.completed ? 'COMPLETED' : 'TODO');
-                const badgeColor = task.priority === 'HIGH' ? 'bg-danger' : task.priority === 'MEDIUM' ? 'bg-warning text-dark' : 'bg-secondary';
-                
-                const taskOwner = getOwnerName(task);
+            const ctxStatus = document.getElementById('statusChart').getContext('2d');
+            statusChartInstance = new Chart(ctxStatus, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Completed', 'In Progress'],
+                    datasets: [{ data: [0, 0], backgroundColor: ['#10b981', '#3b82f6'], borderWidth: 0 }]
+                },
+                options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: 'bottom', labels: { boxWidth: 12, font: { size: 11 } } } } }
+            });
+        }
 
-                if (adminTableBody) {
-                    const statusBadge = status === 'COMPLETED' ? 'bg-success' : status === 'IN_PROGRESS' ? 'bg-warning text-dark' : 'bg-primary';
-                    const tableRow = `
-                        <tr>
-                            <td class="fw-bold">${task.title}</td>
-                            <td><span class="user-badge">👤 ${taskOwner}</span></td>
-                            <td><span class="badge bg-info text-dark">${task.category || 'General'}</span></td>
-                            <td><span class="badge ${badgeColor}">${task.priority}</span></td>
-                            <td><span class="badge ${statusBadge}">${status.replace('_', ' ')}</span></td>
-                            <td>${task.dueDate || 'N/A'}</td>
-                            <td>
-                                <button onclick="deleteTask(${task.id})" class="btn btn-sm btn-outline-danger p-1" style="font-size: 11px;">🗑️ Delete</button>
+        function renderCharts() {
+            const data = getFilteredSchedules();
+            
+            const completed = data.filter(s => s.status === 'Completed').length;
+            const inProgress = data.filter(s => s.status === 'In Progress').length;
+            statusChartInstance.data.datasets[0].data = [completed, inProgress];
+            statusChartInstance.update();
+
+            const weeklyHours = [0, 0, 0, 0, 0, 0, 0];
+            data.forEach(item => {
+                if (item.dueDate) {
+                    const d = new Date(item.dueDate);
+                    let dayOfWeek = d.getDay();
+                    let index = (dayOfWeek === 0) ? 6 : dayOfWeek - 1;
+                    let hrs = item.hours || calculateHours(item.startTime, item.endTime);
+                    weeklyHours[index] += hrs;
+                }
+            });
+
+            weeklyChartInstance.data.datasets[0].data = weeklyHours;
+            weeklyChartInstance.update();
+        }
+
+        function renderCalendar() {
+            const year = currentDate.getFullYear();
+            const month = currentDate.getMonth();
+            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
+            document.getElementById("monthYearTitle").innerText = `${monthNames[month]} ${year}`;
+
+            const firstDay = new Date(year, month, 1).getDay();
+            const daysInMonth = new Date(year, month + 1, 0).getDate();
+            const grid = document.getElementById("calendarDaysGrid");
+            grid.innerHTML = "";
+
+            for (let i = 0; i < firstDay; i++) {
+                grid.innerHTML += `<div class="calendar-cell empty"></div>`;
+            }
+
+            const data = getFilteredSchedules();
+            const todayStr = "2026-08-15";
+            for (let day = 1; day <= daysInMonth; day++) {
+                const dayString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+                const dayTasks = data.filter(s => s.dueDate === dayString);
+                let isTodayClass = (dayString === todayStr) ? 'today' : '';
+                let badgesHtml = dayTasks.map(t => `
+                    <div class="cal-task-badge" title="${t.title}">
+                        <div>🚀 ${t.title}</div>
+                        <span class="cal-task-time"><i class="fa-regular fa-clock me-1"></i>${t.startTime}-${t.endTime} (${(t.hours || 1).toFixed(1)}h)</span>
+                    </div>
+                `).join('');
+
+                grid.innerHTML += `
+                    <div class="calendar-cell ${isTodayClass}">
+                        <div class="day-number">${day}</div>
+                        ${badgesHtml}
+                    </div>
+                `;
+            }
+        }
+
+        function prevMonth() { currentDate.setMonth(currentDate.getMonth() - 1); renderCalendar(); }
+        function nextMonth() { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(); }
+
+        function renderScheduleCards() {
+            const container = document.getElementById("scheduleCardsContainer");
+            container.innerHTML = "";
+            let data = getFilteredSchedules();
+
+            const searchInput = document.getElementById('adminSearchInput');
+            if (searchInput && searchInput.value.trim() !== '') {
+                const query = searchInput.value.toLowerCase();
+                data = data.filter(item => 
+                    item.title.toLowerCase().includes(query) || 
+                    (item.assignedTo && item.assignedTo.toLowerCase().includes(query)) ||
+                    item.createdBy.toLowerCase().includes(query)
+                );
+            }
+
+            const currentRole = localStorage.getItem('eliteschedule_role_fx');
+            const todayStr = "2026-08-15";
+
+            if (currentRole === 'admin') {
+                let studentGroups = {};
+                data.forEach(item => {
+                    let key = item.assignedTo && item.assignedTo !== 'ALL' ? item.assignedTo : (item.createdBy || 'General / Broadcast');
+                    if (!studentGroups[key]) studentGroups[key] = [];
+                    studentGroups[key].push(item);
+                });
+
+                Object.keys(registeredUsers).forEach(email => {
+                    if (!studentGroups[email]) studentGroups[email] = [];
+                });
+
+                Object.keys(studentGroups).forEach((studentEmail) => {
+                    let studentTasks = studentGroups[studentEmail];
+                    let completedCount = studentTasks.filter(t => t.status === 'Completed').length;
+                    let notCompletedCount = studentTasks.filter(t => t.status !== 'Completed' && t.dueDate >= todayStr).length;
+                    let overdueCount = studentTasks.filter(t => t.dueDate < todayStr && t.status !== 'Completed').length;
+
+                    let tasksHtml = '';
+                    if (studentTasks.length === 0) {
+                        tasksHtml = `<div style="grid-column: span 2; text-align: center; padding: 20px; color: var(--text-muted); font-size: 0.88rem;">No tasks submitted or assigned for this student yet.</div>`;
+                    } else {
+                        studentTasks.forEach(item => {
+                            let badgeType = item.role === 'admin' ? '<span class="badge" style="background:#8b5cf6; color:#fff;">Admin Task</span>' : `<span class="badge" style="background:#0284c7; color:#fff;">By: ${item.createdBy}</span>`;
+                            
+                            let isOverdue = item.dueDate < todayStr && item.status !== 'Completed';
+                            let overdueBadge = isOverdue ? `<span class="badge badge-overdue" style="background:#ef4444; color:#fff;">Overdue Red Alert</span>` : '';
+                            let cardStyle = isOverdue ? 'border: 2.5px solid #ef4444; background: rgba(239, 68, 68, 0.08);' : '';
+
+                            let statusButtonHtml = item.status === 'Completed' ? 
+                                `<span class="badge" style="background:#10b981; color:#fff;">Completed (Locked)</span>` : 
+                                `<button onclick="markCompleted(${item.id})" class="btn btn-primary" style="padding: 4px 10px; font-size: 0.78rem; background: #10b981 !important;">Mark Completed</button>`;
+
+                            tasksHtml += `
+                                <div class="glass-panel" style="padding: 18px; margin-bottom: 0; ${cardStyle}">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                        <h5 style="font-weight: 700; margin: 0; font-size: 0.95rem; ${isOverdue ? 'color: #ef4444;' : ''}">🚀 ${item.title}</h5>
+                                        <button onclick="deleteSchedule(${item.id})" style="background: transparent; border: none; color: #ef4444; cursor: pointer; font-size: 0.9rem;"><i class="fa-solid fa-trash-can"></i></button>
+                                    </div>
+                                    <div style="display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap;">
+                                        <span class="badge badge-priority-${item.priority}">${item.priority}</span>
+                                        <span class="badge badge-cat">${item.category}</span>
+                                        ${badgeType}
+                                        ${overdueBadge}
+                                    </div>
+                                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;">
+                                        <i class="fa-regular fa-calendar me-1"></i>${item.dueDate} | <i class="fa-regular fa-clock me-1"></i>${item.startTime} - ${item.endTime} (${(item.hours || 1).toFixed(1)} hrs)
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1.5px solid var(--glass-border); padding-top: 8px; margin-top: 8px;">
+                                        <span style="font-size: 0.76rem; font-weight: 600;">Status: <span style="color: ${isOverdue ? '#ef4444' : 'var(--primary-blue)'};">${isOverdue ? 'Overdue (Not Completed)' : item.status}</span></span>
+                                        ${statusButtonHtml}
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    }
+
+                    container.innerHTML += `
+                        <div class="student-group-card">
+                            <div class="student-group-header" onclick="toggleStudentAccordion(this)">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(0, 102, 255, 0.15); display: flex; align-items: center; justify-content: center; color: var(--primary-blue); font-weight: 800;">
+                                        <i class="fa-solid fa-user-graduate"></i>
+                                    </div>
+                                    <div>
+                                        <h5 style="margin: 0; font-weight: 800; font-size: 1rem; color: var(--text-main);">${studentEmail}</h5>
+                                        <span style="font-size: 0.78rem; color: var(--text-muted);">Total Tasks: ${studentTasks.length}</span>
+                                    </div>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 10px; flex-wrap: wrap;">
+                                    <span class="badge" style="background: #10b981; color: #fff;">Completed: ${completedCount}</span>
+                                    <span class="badge" style="background: #f59e0b; color: #fff;">Not Completed: ${notCompletedCount}</span>
+                                    <span class="badge" style="background: #ef4444; color: #fff;">Overdue: ${overdueCount}</span>
+                                    <i class="fa-solid fa-chevron-down" style="transition: transform 0.3s ease;"></i>
+                                </div>
+                            </div>
+                            <div class="student-tasks-container">
+                                ${tasksHtml}
+                            </div>
+                        </div>
+                    `;
+                });
+
+            } else {
+                let gridHtml = `<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;" id="studentGridInner"></div>`;
+                container.innerHTML = gridHtml;
+                const innerGrid = document.getElementById("studentGridInner");
+
+                data.forEach(item => {
+                    let badgeType = item.role === 'admin' ? '<span class="badge" style="background:#8b5cf6; color:#fff;">Admin Task</span>' : `<span class="badge" style="background:#0284c7; color:#fff;">By: ${item.createdBy}</span>`;
+                    
+                    let isOverdue = item.dueDate < todayStr && item.status !== 'Completed';
+                    let overdueBadge = isOverdue ? `<span class="badge badge-overdue" style="background:#ef4444; color:#fff;">Overdue Red Alert</span>` : '';
+                    let cardStyle = isOverdue ? 'border: 2.5px solid #ef4444; background: rgba(239, 68, 68, 0.08);' : '';
+
+                    let statusButtonHtml = item.status === 'Completed' ? 
+                        `<span class="badge" style="background:#10b981; color:#fff;">Completed (Locked)</span>` : 
+                        `<button onclick="markCompleted(${item.id})" class="btn btn-primary" style="padding: 4px 10px; font-size: 0.78rem; background: #10b981 !important;">Mark Completed</button>`;
+
+                    let deleteBtn = item.role === 'admin' ? 
+                        `<span style="font-size: 0.75rem; color: var(--text-muted);"><i class="fa-solid fa-lock"></i></span>` : 
+                        `<button onclick="deleteSchedule(${item.id})" style="background: transparent; border: none; color: #ef4444; cursor: pointer; font-size: 0.95rem;"><i class="fa-solid fa-trash-can"></i></button>`;
+
+                    innerGrid.innerHTML += `
+                        <div class="glass-panel" style="padding: 22px; margin-bottom: 0; ${cardStyle}">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <h5 style="font-weight: 700; margin: 0; font-size: 1rem; ${isOverdue ? 'color: #ef4444;' : ''}">🚀 ${item.title}</h5>
+                                ${deleteBtn}
+                            </div>
+                            <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+                                <span class="badge badge-priority-${item.priority}">${item.priority}</span>
+                                <span class="badge badge-cat">${item.category}</span>
+                                ${badgeType}
+                                ${overdueBadge}
+                            </div>
+                            <div style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 10px;">
+                                <i class="fa-regular fa-calendar me-1"></i>${item.dueDate} | <i class="fa-regular fa-clock me-1"></i>${item.startTime} - ${item.endTime} (${(item.hours || 1).toFixed(1)} hrs)
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1.5px solid var(--glass-border); padding-top: 10px; margin-top: 10px;">
+                                <span style="font-size: 0.78rem; font-weight: 600;">Status: <span style="color: ${isOverdue ? '#ef4444' : 'var(--primary-blue)'};">${isOverdue ? 'Overdue (Not Completed)' : item.status}</span></span>
+                                ${statusButtonHtml}
+                            </div>
+                        </div>
+                    `;
+                });
+            }
+        }
+
+        function toggleStudentAccordion(headerEl) {
+            headerEl.classList.toggle('active');
+            const tasksContainer = headerEl.nextElementSibling;
+            tasksContainer.classList.toggle('active');
+            const icon = headerEl.querySelector('.fa-chevron-down');
+            if (icon) {
+                icon.style.transform = tasksContainer.classList.contains('active') ? 'rotate(180deg)' : 'rotate(0deg)';
+            }
+        }
+
+        function markCompleted(id) {
+            const item = schedules.find(s => s.id === id);
+            if (item && item.status !== 'Completed') {
+                item.status = 'Completed';
+                saveSchedules();
+                updateAllViews();
+                updateDailyGoalDisplay();
+            }
+        }
+
+        function deleteSchedule(id) {
+            const item = schedules.find(s => s.id === id);
+            const currentRole = localStorage.getItem('eliteschedule_role_fx');
+            if (currentRole === 'student' && item && item.role === 'admin') {
+                alert("Students cannot delete admin tasks!");
+                return;
+            }
+            schedules = schedules.filter(s => s.id !== id);
+            saveSchedules();
+            updateAllViews();
+            updateDailyGoalDisplay();
+        }
+
+        function removeRegisteredStudent(email) {
+            if (confirm(`Are you sure you want to remove student: ${email}? This will also delete all tasks associated with this student.`)) {
+                delete registeredUsers[email];
+                saveUsersDB();
+
+                schedules = schedules.filter(s => s.createdBy !== email && s.assignedTo !== email);
+                saveSchedules();
+
+                openUsersModal(); 
+                populateAdminStudentDropdown();
+                updateAllViews();
+                updateDailyGoalDisplay();
+            }
+        }
+
+        function openUsersModal() {
+            const usersDB = JSON.parse(localStorage.getItem('eliteschedule_users_db_fx')) || {};
+            const userEmails = Object.keys(usersDB);
+            
+            document.getElementById('registeredUsersCountText').innerText = `Total Registered Students: ${userEmails.length}`;
+            
+            const tbody = document.getElementById('usersTableBody');
+            tbody.innerHTML = "";
+            
+            if (userEmails.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 20px;">No students registered yet.</td></tr>`;
+            } else {
+                userEmails.forEach((email, index) => {
+                    tbody.innerHTML += `
+                        <tr style="border-bottom: 1.5px solid var(--glass-border);">
+                            <td style="padding: 10px;">${index + 1}</td>
+                            <td style="padding: 10px;">${email}</td>
+                            <td style="padding: 10px;">${usersDB[email]}</td>
+                            <td style="padding: 10px; text-align: right;">
+                                <button onclick="removeRegisteredStudent('${email}')" class="btn" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: none; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 0.8rem;" title="Remove Student">
+                                    <i class="fa-solid fa-user-xmark me-1"></i> Remove
+                                </button>
                             </td>
                         </tr>
                     `;
-                    adminTableBody.innerHTML += tableRow;
-                }
-
-                let progressHtml = '';
-                if (task.subTasks && task.subTasks.length > 0) {
-                    const total = task.subTasks.length;
-                    const done = task.subTasks.filter(s => s.completed).length;
-                    const percent = Math.round((done / total) * 100);
-                    progressHtml = `<div class="progress mt-2" style="height: 12px;"><div class="progress-bar bg-info" style="width: ${percent}%;">${done}/${total}</div></div>`;
-                }
-
-                const cardHtml = `
-                    <div class="card p-2 mb-2 shadow-sm kanban-card" draggable="true" ondragstart="drag(event, ${task.id})">
-                        <div class="d-flex justify-content-between align-items-center mb-1">
-                            <span class="user-badge">👤 ${taskOwner}</span>
-                            <span class="badge bg-primary">${task.category || 'General'}</span>
-                        </div>
-                        <div class="fw-bold my-1">${task.title}</div>
-                        <div class="mt-1"><span class="badge ${badgeColor}">${task.priority}</span>${getDueDateBadge(task.dueDate)}</div>
-                        ${progressHtml}
-                        <div class="mt-2 text-end">
-                            <button onclick="generateAiSubtasks(${task.id}, event)" class="btn btn-sm btn-outline-warning p-1 me-1" style="font-size: 11px;">✨ AI</button>
-                            <button onclick="deleteTask(${task.id})" class="btn btn-sm btn-outline-danger p-1" style="font-size: 11px;">🗑️</button>
-                        </div>
-                    </div>
-                `;
-
-                const targetCol = document.getElementById(`col-${status}`);
-                if (targetCol) targetCol.innerHTML += cardHtml;
-            });
-        }
-
-        function allowDrop(ev) { ev.preventDefault(); }
-        function drag(ev, id) { ev.dataTransfer.setData("taskId", id); }
-        async function drop(ev, newStatus) {
-            ev.preventDefault();
-            const id = ev.dataTransfer.getData("taskId");
-            await fetch(`${API_URL}/${id}/status`, {
-                method: "PATCH",
-                headers: { "Content-Type": "application/json", ...getAuthHeader() },
-                body: JSON.stringify({ status: newStatus })
-            });
-            fetchTasks();
-        }
-
-        document.getElementById("taskForm").addEventListener("submit", async (e) => {
-            e.preventDefault();
-            const title = document.getElementById("title").value;
-            const category = document.getElementById("category").value;
-            const priority = document.getElementById("priority").value;
-            const dueDate = document.getElementById("dueDate").value;
-            const description = document.getElementById("description").value;
-
-            await fetch(API_URL, {
-                method: "POST",
-                headers: { "Content-Type": "application/json", ...getAuthHeader() },
-                body: JSON.stringify({ title, category, priority, dueDate, description, status: "TODO", completed: false })
-            });
-
-            document.getElementById("taskForm").reset();
-            fetchTasks();
-        });
-
-        async function generateAiSubtasks(id, evt) {
-            const button = evt.target;
-            button.innerText = "⏳...";
-            button.disabled = true;
-            try {
-                const res = await fetch(`${API_URL}/${id}/generate-subtasks`, { method: "POST", headers: getAuthHeader() });
-                if (res.ok) fetchTasks();
-            } finally {
-                button.innerText = "✨ AI";
-                button.disabled = false;
+                });
             }
+            openModal('usersListModal');
         }
 
-        async function deleteTask(id) {
-            await fetch(`${API_URL}/${id}`, { method: "DELETE", headers: getAuthHeader() });
-            fetchTasks();
+        function exportAdminReportPDF() {
+            const { jsPDF } = window.jspdf;
+            const doc = new jsPDF();
+
+            doc.setFont("helvetica", "bold");
+            doc.setFontSize(16);
+            doc.text("EliteSchedule.glass - Group Report", 14, 20);
+
+            doc.setFont("helvetica", "normal");
+            doc.setFontSize(10);
+            doc.text("Generated Date: 2026-08-15", 14, 27);
+
+            const usersDB = JSON.parse(localStorage.getItem('eliteschedule_users_db_fx')) || {};
+            const userEmails = Object.keys(usersDB);
+            
+            doc.setFont("helvetica", "bold");
+            doc.text(`Total Registered Students: ${userEmails.length}`, 14, 37);
+            
+            let y = 44;
+            doc.setFont("helvetica", "bold");
+            doc.text("S.No", 14, y);
+            doc.text("Student Email", 30, y);
+            doc.text("Password", 130, y);
+            
+            y += 4;
+            doc.line(14, y, 195, y);
+            y += 6;
+
+            doc.setFont("helvetica", "normal");
+            userEmails.forEach((email, index) => {
+                if (y > 270) { doc.addPage(); y = 20; }
+                doc.text(`${index + 1}`, 14, y);
+                doc.text(`${email}`, 30, y);
+                doc.text(`${usersDB[email]}`, 130, y);
+                y += 7;
+            });
+
+            y += 10;
+            if (y > 250) { doc.addPage(); y = 20; }
+            
+            doc.setFont("helvetica", "bold");
+            doc.text("All Tasks & Submissions", 14, y);
+            y += 6;
+            
+            doc.text("Task Title", 14, y);
+            doc.text("Due Date", 110, y);
+            doc.text("Status", 150, y);
+            y += 4;
+            doc.line(14, y, 195, y);
+            y += 6;
+
+            doc.setFont("helvetica", "normal");
+            schedules.forEach((item) => {
+                if (y > 270) { doc.addPage(); y = 20; }
+                doc.text(`${item.title.substring(0, 40)}`, 14, y);
+                doc.text(`${item.dueDate}`, 110, y);
+                doc.text(`${item.status}`, 150, y);
+                y += 7;
+            });
+
+            doc.save("EliteSchedule_Group_Report.pdf");
         }
     </script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.0/sockjs.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+<script>
+    let socket = new SockJS('/ws-task');
+    let stompClient = Stomp.over(socket);
+
+    stompClient.connect({}, function (frame) {
+        console.log('Connected: ' + frame);
+        stompClient.subscribe('/topic/admin-tasks', function (taskMessage) {
+            let task = JSON.parse(taskMessage.body);
+            // Refresh or append task to Admin UI dynamically without reload
+            appendTaskToAdminTable(task);
+        });
+    });
+</script>
 </body>
 </html>
