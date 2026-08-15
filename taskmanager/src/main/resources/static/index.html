@@ -1210,5 +1210,17 @@
         });
     });
 </script>
+<script>
+  const wsSocket = new SockJS('/ws-task');
+  const adminStompClient = Stomp.over(wsSocket);
+
+  adminStompClient.connect({}, function (frame) {
+      console.log('Connected: ' + frame);
+      adminStompClient.subscribe('/topic/admin-tasks', function (taskMessage) {
+          let task = JSON.parse(taskMessage.body);
+          appendTaskToAdminTable(task);
+      });
+  });
+</script>
 </body>
 </html>
