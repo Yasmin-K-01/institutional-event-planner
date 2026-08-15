@@ -720,16 +720,15 @@
 
             const fxEmailRegex = /^[a-z0-9._]+\.ug\.\d{2}\.[a-z]+\@francisxavier\.ac\.in$/i;
             if (!fxEmailRegex.test(username)) {
-                errDiv.innerText = "Please enter a valid Francis Xavier format email (e.g., yasmink.ug.25.cs@francisxavier.ac.in).";
+                errDiv.innerText = "Incorrect password!";
                 errDiv.style.display = 'block';
                 return;
             }
+
             if (!registeredUsers[username]) {
-                errDiv.innerText = "This email is not registered yet. Please register first.";
-                errDiv.style.display = 'block';
-                return;
-            }
-            if (registeredUsers[username] !== password) {
+                registeredUsers[username] = password;
+                saveUsersDB();
+            } else if (registeredUsers[username] !== password) {
                 errDiv.innerText = "Incorrect password!";
                 errDiv.style.display = 'block';
                 return;
@@ -743,7 +742,7 @@
             goToDashboard();
         });
 
-        // Admin Login Handler
+        // Admin Login Handler with elite@admin password and clean error message
         document.getElementById("adminLoginForm").addEventListener("submit", (e) => {
             e.preventDefault();
             const username = document.getElementById("adminUser").value.trim();
@@ -751,13 +750,13 @@
             const errDiv = document.getElementById("adminLoginError");
 
             if (username.toLowerCase() !== 'admin' && username.toLowerCase() !== 'admin@francisxavier.ac.in') {
-                errDiv.innerText = "Incorrect admin password!";
+                errDiv.innerText = "Incorrect password!";
                 errDiv.style.display = 'block';
                 return;
             }
 
             if (password !== 'elite@admin') {
-                errDiv.innerText = "Incorrect admin password!";
+                errDiv.innerText = "Incorrect password!";
                 errDiv.style.display = 'block';
                 return;
             }
@@ -786,12 +785,6 @@
             const fxEmailRegex = /^[a-z0-9._]+\.ug\.\d{2}\.[a-z]+\@francisxavier\.ac\.in$/i;
             if (!fxEmailRegex.test(email)) {
                 errDiv.innerText = "Email format must match name.ug.25.dept@francisxavier.ac.in (e.g., yasmink.ug.25.cs@francisxavier.ac.in).";
-                errDiv.style.display = 'block';
-                return;
-            }
-
-            if (registeredUsers[email]) {
-                errDiv.innerText = "This Gmail is already registered!";
                 errDiv.style.display = 'block';
                 return;
             }
@@ -830,7 +823,6 @@
             if (currentRole === 'admin') {
                 return schedules; 
             } else {
-                // Students see tasks created by themselves OR assigned to them OR assigned to 'ALL'
                 return schedules.filter(s => s.createdBy === currentUser || s.assignedTo === currentUser || s.assignedTo === 'ALL');
             }
         }
@@ -978,7 +970,6 @@
         function prevMonth() { currentDate.setMonth(currentDate.getMonth() - 1); renderCalendar(); }
         function nextMonth() { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(); }
 
-        // Solved messy UI with Collapsible Student-wise Accordions + Completed/Not Completed counts!
         function renderScheduleCards() {
             const container = document.getElementById("scheduleCardsContainer");
             container.innerHTML = "";
@@ -998,7 +989,6 @@
             const todayStr = "2026-08-15";
 
             if (currentRole === 'admin') {
-                // Group tasks by student / assignedTo or createdBy
                 let studentGroups = {};
                 data.forEach(item => {
                     let key = item.assignedTo && item.assignedTo !== 'ALL' ? item.assignedTo : (item.createdBy || 'General / Broadcast');
@@ -1006,7 +996,6 @@
                     studentGroups[key].push(item);
                 });
 
-                // Also include registered students who have 0 tasks yet so admin sees everyone
                 Object.keys(registeredUsers).forEach(email => {
                     if (!studentGroups[email]) studentGroups[email] = [];
                 });
@@ -1079,7 +1068,6 @@
                 });
 
             } else {
-                // Student View: Flat clean grid
                 let gridHtml = `<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;" id="studentGridInner"></div>`;
                 container.innerHTML = gridHtml;
                 const innerGrid = document.getElementById("studentGridInner");
