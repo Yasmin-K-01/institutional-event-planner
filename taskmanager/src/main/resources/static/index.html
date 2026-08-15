@@ -21,7 +21,7 @@
             --bg-gradient: linear-gradient(135deg, #f0f4ff 0%, #e2e8f0 100%);
             --glass-bg: rgba(255, 255, 255, 0.88);
             --glass-card-bg: rgba(255, 255, 255, 0.95);
-            --glass-border: rgba(255, 255, 255, 0.9);
+            --glass-border: rgba(0, 102, 255, 0.25);
             --text-main: #0f172a;
             --text-muted: #475569;
             --border-radius: 24px;
@@ -31,7 +31,7 @@
             --bg-gradient: linear-gradient(135deg, #090d16 0%, #172033 100%);
             --glass-bg: rgba(15, 23, 42, 0.92);
             --glass-card-bg: rgba(30, 41, 59, 0.95);
-            --glass-border: rgba(255, 255, 255, 0.15);
+            --glass-border: rgba(255, 255, 255, 0.22);
             --text-main: #f8fafc;
             --text-muted: #94a3b8;
         }
@@ -57,9 +57,9 @@
             background: var(--glass-bg);
             backdrop-filter: blur(25px) saturate(180%);
             -webkit-backdrop-filter: blur(25px);
-            border: 1px solid var(--glass-border);
+            border: 1.5px solid var(--glass-border);
             border-radius: var(--border-radius);
-            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 12px 35px rgba(0, 0, 0, 0.12);
             margin-bottom: 28px;
             padding: 32px;
         }
@@ -67,7 +67,7 @@
         .navbar {
             background: rgba(255, 255, 255, 0.85);
             backdrop-filter: blur(20px);
-            border-bottom: 1px solid var(--glass-border);
+            border-bottom: 1.5px solid var(--glass-border);
             position: sticky;
             top: 0;
             z-index: 1000;
@@ -110,7 +110,7 @@
             padding: 0 8px;
             box-sizing: border-box;
             box-shadow: inset 0 2px 6px rgba(0, 0, 0, 0.5);
-            border: 1px solid rgba(255, 255, 255, 0.15);
+            border: 1.5px solid rgba(255, 255, 255, 0.25);
             transition: background 0.5s ease;
         }
         .toggle-thumb {
@@ -145,7 +145,7 @@
         .glass-modal-card {
             background: var(--glass-card-bg);
             backdrop-filter: blur(30px);
-            border: 1px solid var(--glass-border);
+            border: 1.5px solid var(--glass-border);
             border-radius: var(--border-radius);
             width: 90%; max-width: 440px;
             padding: 35px;
@@ -157,7 +157,7 @@
         .hero-section { padding: 30px 0; }
         .hero-panel {
             background: var(--glass-card-bg);
-            border: 1px solid var(--glass-border);
+            border: 1.5px solid var(--glass-border);
             border-radius: 32px;
             padding: 55px 40px;
             box-shadow: 0 20px 50px rgba(0, 0, 0, 0.08);
@@ -170,7 +170,7 @@
         .feature-cards-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 24px; margin-top: 40px; }
         .feature-card {
             background: var(--glass-card-bg);
-            border: 1px solid var(--glass-border);
+            border: 1.5px solid var(--glass-border);
             border-radius: 20px;
             padding: 28px 22px;
             text-align: center;
@@ -183,7 +183,7 @@
 
         .btn {
             padding: 12px 24px; border-radius: 14px; font-weight: 600; font-size: 0.92rem;
-            cursor: pointer; border: 1px solid transparent; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; transition: all 0.2s;
+            cursor: pointer; border: 1.5px solid transparent; display: inline-flex; align-items: center; gap: 8px; text-decoration: none; transition: all 0.2s;
         }
         .btn-primary {
             background: linear-gradient(135deg, #0066ff, #0052cc);
@@ -197,7 +197,7 @@
 
         .form-control, .form-select {
             width: 100%; background: var(--glass-card-bg);
-            border: 1px solid var(--glass-border); border-radius: 14px;
+            border: 1.5px solid var(--glass-border); border-radius: 14px;
             color: var(--text-main); padding: 0.9rem 1rem; font-size: 0.92rem;
             box-sizing: border-box; margin-bottom: 20px; font-family: 'Plus Jakarta Sans', sans-serif; font-weight: 500;
         }
@@ -208,12 +208,12 @@
 
         .metric-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 20px; margin-bottom: 30px; }
         .metric-card {
-            background: var(--glass-card-bg); border: 1px solid var(--glass-border);
+            background: var(--glass-card-bg); border: 1.5px solid var(--glass-border);
             border-radius: 20px; padding: 22px; display: flex; align-items: center; gap: 16px;
         }
         .metric-icon {
             width: 52px; height: 52px; border-radius: 14px; display: flex; align-items: center; justify-content: center; font-size: 1.35rem;
-            background: var(--glass-card-bg); border: 1px solid var(--glass-border);
+            background: var(--glass-card-bg); border: 1.5px solid var(--glass-border);
         }
 
         .workspace-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 24px; margin-bottom: 30px; }
@@ -221,19 +221,48 @@
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 10px; }
         .calendar-day-header { text-align: center; font-weight: 700; padding: 10px; color: var(--primary-blue); font-size: 0.88rem; }
         .calendar-cell {
-            min-height: 125px; background: var(--glass-card-bg); border: 1px solid var(--glass-border);
+            min-height: 125px; background: var(--glass-card-bg); border: 1.5px solid var(--glass-border);
             border-radius: 16px; padding: 10px; display: flex; flex-direction: column; gap: 6px; max-height: 145px; overflow-y: auto;
         }
-        .calendar-cell.empty { background: rgba(255, 255, 255, 0.02); border: 1px dashed rgba(255, 255, 255, 0.08); }
-        .calendar-cell.today { border: 2px solid var(--primary-blue) !important; box-shadow: 0 0 15px rgba(0, 102, 255, 0.3); }
+        .calendar-cell.empty { background: rgba(255, 255, 255, 0.02); border: 1.5px dashed rgba(255, 255, 255, 0.2); }
+        .calendar-cell.today { border: 2.5px solid var(--primary-blue) !important; box-shadow: 0 0 18px rgba(0, 102, 255, 0.4); }
         .day-number { font-size: 0.82rem; font-weight: 700; color: var(--text-muted); }
         .cal-task-badge {
             background: linear-gradient(135deg, #0066ff, #4338ca); color: #ffffff;
             font-size: 0.65rem; font-weight: 600; padding: 5px 8px; border-radius: 8px; line-height: 1.3;
+            border: 1px solid rgba(255, 255, 255, 0.2);
         }
         .cal-task-time { font-size: 0.58rem; opacity: 0.9; display: block; }
 
-        .schedule-cards-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 22px; }
+        /* Admin Accordion / Collapsible Styling */
+        .student-group-card {
+            background: var(--glass-card-bg);
+            border: 1.5px solid var(--glass-border);
+            border-radius: 18px;
+            margin-bottom: 16px;
+            overflow: hidden;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.06);
+            transition: all 0.3s ease;
+        }
+        .student-group-header {
+            padding: 18px 22px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            background: rgba(255, 255, 255, 0.03);
+            border-bottom: 1.5px solid transparent;
+        }
+        .student-group-header:hover { background: rgba(0, 102, 255, 0.05); }
+        .student-group-header.active { border-bottom-color: var(--glass-border); }
+        .student-tasks-container {
+            padding: 20px;
+            display: none;
+            background: rgba(0, 0, 0, 0.01);
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+        }
+        .student-tasks-container.active { display: grid; }
 
         .badge { padding: 5px 10px; border-radius: 8px; font-size: 0.72rem; font-weight: 600; }
         .badge-priority-High { background: #ef4444; color: #fff; }
@@ -246,7 +275,7 @@
         .chart-container { position: relative; height: 230px; width: 100%; }
         .alert-error {
             background: rgba(239, 68, 68, 0.15);
-            border: 1px solid rgba(239, 68, 68, 0.4);
+            border: 1.5px solid rgba(239, 68, 68, 0.4);
             color: #ef4444;
             padding: 10px 14px;
             border-radius: 10px;
@@ -256,7 +285,7 @@
         }
 
         @media(max-width: 992px) {
-            .feature-cards-grid, .metric-grid, .workspace-grid, .schedule-cards-grid { grid-template-columns: 1fr; }
+            .feature-cards-grid, .metric-grid, .workspace-grid, .student-tasks-container { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -335,10 +364,10 @@
             <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 18px;">
                 <div>
                     <h4 style="font-weight: 800; margin: 0; color: #8b5cf6;"><i class="fa-solid fa-shield-halved me-2"></i>Admin Management Portal (Francis Xavier CSE)</h4>
-                    <p style="margin: 6px 0 0 0; font-size: 0.88rem; color: var(--text-muted);">Monitor student submissions, registered student emails, and audit reports.</p>
+                    <p style="margin: 6px 0 0 0; font-size: 0.88rem; color: var(--text-muted);">Organized student-wise grouping with real-time completion status counts.</p>
                 </div>
                 <div style="display: flex; gap: 12px; align-items: center; flex-wrap: wrap;">
-                    <input type="text" id="adminSearchInput" class="form-control" placeholder="Search tasks..." style="margin: 0; width: 190px;" oninput="renderScheduleCards()">
+                    <input type="text" id="adminSearchInput" class="form-control" placeholder="Search student or task..." style="margin: 0; width: 210px;" oninput="updateAllViews()">
                     <button class="btn btn-primary" style="background: #8b5cf6 !important; padding: 10px 16px; font-size: 0.85rem;" onclick="openUsersModal()">
                         <i class="fa-solid fa-users me-1"></i> Registered Students
                     </button>
@@ -383,7 +412,7 @@
 
         <!-- Workspace Grid -->
         <div class="workspace-grid">
-            <!-- Log Form -->
+            <!-- Log Form / Task Assignment Form -->
             <div class="glass-panel" style="margin-bottom: 0;">
                 <h4 style="font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
                     <i class="fa-solid fa-hourglass-half text-primary"></i> <span id="formTitleText">Log Hourly Activity (8h Comfort Goal)</span>
@@ -415,10 +444,12 @@
                         <div>
                             <label style="font-size: 0.75rem; color: var(--text-muted); font-weight: 700;">Category</label>
                             <select id="taskCategory" class="form-select">
-                                <option value="IoT Project">IoT Project</option>
-                                <option value="C Programming">C Programming</option>
-                                <option value="College Lab">College Lab</option>
-                                <option value="Paper Presentation">Paper Presentation</option>
+                                <option value="college">college</option>
+                                <option value="personal">personal</option>
+                                <option value="academic">academic</option>
+                                <option value="project">project</option>
+                                <option value="sports">sports</option>
+                                <option value="other">other</option>
                             </select>
                         </div>
                         <div>
@@ -431,7 +462,15 @@
                         </div>
                     </div>
 
-                    <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 12px; padding: 12px;">
+                    <!-- Admin Target Assignment Dropdown (Visible only for Admin) -->
+                    <div id="adminAssignContainer" style="display: none; margin-bottom: 15px;">
+                        <label style="font-size: 0.75rem; color: #8b5cf6; font-weight: 700;"><i class="fa-solid fa-paper-plane me-1"></i> Assign Task To Specific Student</label>
+                        <select id="assignStudentTarget" class="form-select" style="border-color: #8b5cf6;">
+                            <option value="ALL">Broadcast to All Students</option>
+                        </select>
+                    </div>
+
+                    <button type="submit" id="formSubmitBtn" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 12px; padding: 12px;">
                         <i class="fa-solid fa-plus me-1"></i> Submit Activity (Flexible 8h Target)
                     </button>
                 </form>
@@ -478,12 +517,12 @@
             <div class="calendar-grid" id="calendarDaysGrid"></div>
         </div>
 
-        <!-- Schedule Cards Grid -->
+        <!-- Schedule / Student Grouped Cards Section -->
         <div style="margin-bottom: 40px;">
             <h4 style="font-weight: 700; margin-bottom: 20px; display: flex; align-items: center; gap: 10px;">
                 <i class="fa-solid fa-clock-rotate-left text-primary"></i> <span id="scheduleListTitle">Logged Hourly Schedules</span>
             </h4>
-            <div class="schedule-cards-grid" id="scheduleCardsGrid"></div>
+            <div id="scheduleCardsContainer"></div>
         </div>
     </div>
 
@@ -577,8 +616,11 @@
 
     <script>
         const defaultSchedules = [
-            { id: 1, title: 'IoT Gas Leakage Detector Prototype', dueDate: '2026-08-10', startTime: '09:00', endTime: '17:00', category: 'IoT Project', priority: 'High', status: 'Completed', role: 'admin', createdBy: 'Admin' },
-            { id: 2, title: 'C Programming Loops & Conditions Drill', dueDate: '2026-08-15', startTime: '10:00', endTime: '18:00', category: 'C Programming', priority: 'Medium', status: 'In Progress', role: 'student', createdBy: 'yasmink.ug.25.cs@francisxavier.ac.in' }
+            { id: 1, title: 'IoT Gas Leakage Detector Prototype', dueDate: '2026-08-10', startTime: '09:00', endTime: '17:00', category: 'project', priority: 'High', status: 'Completed', role: 'admin', createdBy: 'Admin', assignedTo: 'ALL' },
+            { id: 2, title: 'C Programming Loops & Conditions Drill', dueDate: '2026-08-15', startTime: '10:00', endTime: '18:00', category: 'academic', priority: 'Medium', status: 'In Progress', role: 'student', createdBy: 'yasmink.ug.25.cs@francisxavier.ac.in', assignedTo: 'yasmink.ug.25.cs@francisxavier.ac.in' },
+            { id: 3, title: 'linkedin', dueDate: '2026-08-14', startTime: '09:00', endTime: '17:00', category: 'project', priority: 'Medium', status: 'In Progress', role: 'student', createdBy: 'yasmink.ug.25.cs@francisxavier.ac.in', assignedTo: 'yasmink.ug.25.cs@francisxavier.ac.in' },
+            { id: 4, title: 'whatsapp', dueDate: '2026-08-13', startTime: '09:00', endTime: '17:00', category: 'project', priority: 'Medium', status: 'In Progress', role: 'student', createdBy: 'yasmink.ug.25.cs@francisxavier.ac.in', assignedTo: 'yasmink.ug.25.cs@francisxavier.ac.in' },
+            { id: 5, title: 'sensor', dueDate: '2026-08-13', startTime: '09:00', endTime: '17:00', category: 'project', priority: 'Medium', status: 'In Progress', role: 'student', createdBy: 'yasmink.ug.25.cs@francisxavier.ac.in', assignedTo: 'yasmink.ug.25.cs@francisxavier.ac.in' }
         ];
 
         let schedules = JSON.parse(localStorage.getItem('taskflow_schedules_fx')) || defaultSchedules;
@@ -594,7 +636,7 @@
         let weeklyChartInstance = null;
 
         document.addEventListener("DOMContentLoaded", () => {
-            document.getElementById('taskDate').value = "2026-08-13";
+            document.getElementById('taskDate').value = "2026-08-15";
             document.getElementById('startTime').value = "09:00";
             document.getElementById('endTime').value = "17:00";
 
@@ -630,6 +672,14 @@
         function closeModal(id) { document.getElementById(id).classList.remove('active'); }
         function switchModal(closeId, openId) { closeModal(closeId); openModal(openId); }
 
+        function populateAdminStudentDropdown() {
+            const selectEl = document.getElementById('assignStudentTarget');
+            selectEl.innerHTML = `<option value="ALL">Broadcast to All Students</option>`;
+            Object.keys(registeredUsers).forEach(email => {
+                selectEl.innerHTML += `<option value="${email}">${email}</option>`;
+            });
+        }
+
         function checkAuthStatus() {
             const user = localStorage.getItem('taskflow_user_fx');
             const role = localStorage.getItem('taskflow_role_fx');
@@ -642,12 +692,17 @@
                 
                 if (role === 'admin') {
                     document.getElementById('adminBanner').style.display = 'block';
-                    document.getElementById('formTitleText').innerText = "Assign Global CSE Task (Admin)";
-                    document.getElementById('scheduleListTitle').innerText = "All Student Submissions & IoT Progress (Admin View)";
+                    document.getElementById('formTitleText').innerText = "Assign Task to Student(s) (Admin)";
+                    document.getElementById('formSubmitBtn').innerHTML = `<i class="fa-solid fa-paper-plane me-1"></i> Assign Task to Student`;
+                    document.getElementById('adminAssignContainer').style.display = 'block';
+                    document.getElementById('scheduleListTitle').innerText = "Student Submissions & Task Progress (Grouped View)";
+                    populateAdminStudentDropdown();
                 } else {
                     document.getElementById('adminBanner').style.display = 'none';
                     document.getElementById('formTitleText').innerText = "Log Hourly Activity (8h Comfort Goal)";
-                    document.getElementById('scheduleListTitle').innerText = "Your Logged Schedules & IoT Tasks";
+                    document.getElementById('formSubmitBtn').innerHTML = `<i class="fa-solid fa-plus me-1"></i> Submit Activity (Flexible 8h Target)`;
+                    document.getElementById('adminAssignContainer').style.display = 'none';
+                    document.getElementById('scheduleListTitle').innerText = "Your Logged Schedules & Assigned Tasks";
                 }
             } else {
                 document.getElementById('authNavButtons').style.display = 'flex';
@@ -775,7 +830,8 @@
             if (currentRole === 'admin') {
                 return schedules; 
             } else {
-                return schedules.filter(s => s.role === 'admin' || s.createdBy === currentUser);
+                // Students see tasks created by themselves OR assigned to them OR assigned to 'ALL'
+                return schedules.filter(s => s.createdBy === currentUser || s.assignedTo === currentUser || s.assignedTo === 'ALL');
             }
         }
 
@@ -796,6 +852,14 @@
             const endTime = document.getElementById("endTime").value;
             const loggedHours = calculateHours(startTime, endTime);
 
+            let assignedToUser = currentUser;
+            let roleType = currentRole;
+
+            if (currentRole === 'admin') {
+                roleType = 'admin';
+                assignedToUser = document.getElementById("assignStudentTarget").value;
+            }
+
             const newLog = {
                 id: Date.now(),
                 title: document.getElementById("taskDesc").value,
@@ -806,8 +870,9 @@
                 category: document.getElementById("taskCategory").value,
                 priority: document.getElementById("taskPriority").value,
                 status: 'In Progress',
-                role: currentRole,
-                createdBy: currentUser
+                role: roleType,
+                createdBy: currentUser,
+                assignedTo: assignedToUser
             };
 
             schedules.push(newLog);
@@ -831,7 +896,7 @@
             document.getElementById("inProgressLogs").innerText = data.filter(s => s.status === 'In Progress').length;
             document.getElementById("completedLogs").innerText = data.filter(s => s.status === 'Completed').length;
             
-            const todayStr = "2026-08-13";
+            const todayStr = "2026-08-15";
             const overdueCount = data.filter(s => s.dueDate < todayStr && s.status !== 'Completed').length;
             document.getElementById("overdueLogs").innerText = overdueCount;
         }
@@ -889,7 +954,7 @@
             }
 
             const data = getFilteredSchedules();
-            const todayStr = "2026-08-13";
+            const todayStr = "2026-08-15";
             for (let day = 1; day <= daysInMonth; day++) {
                 const dayString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
                 const dayTasks = data.filter(s => s.dueDate === dayString);
@@ -913,9 +978,10 @@
         function prevMonth() { currentDate.setMonth(currentDate.getMonth() - 1); renderCalendar(); }
         function nextMonth() { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(); }
 
+        // Solved messy UI with Collapsible Student-wise Accordions + Completed/Not Completed counts!
         function renderScheduleCards() {
-            const grid = document.getElementById("scheduleCardsGrid");
-            grid.innerHTML = "";
+            const container = document.getElementById("scheduleCardsContainer");
+            container.innerHTML = "";
             let data = getFilteredSchedules();
 
             const searchInput = document.getElementById('adminSearchInput');
@@ -923,55 +989,147 @@
                 const query = searchInput.value.toLowerCase();
                 data = data.filter(item => 
                     item.title.toLowerCase().includes(query) || 
+                    (item.assignedTo && item.assignedTo.toLowerCase().includes(query)) ||
                     item.createdBy.toLowerCase().includes(query)
                 );
             }
 
-            const todayStr = "2026-08-13";
             const currentRole = localStorage.getItem('taskflow_role_fx');
+            const todayStr = "2026-08-15";
 
-            data.forEach(item => {
-                let badgeType = item.role === 'admin' ? '<span class="badge" style="background:#8b5cf6; color:#fff;">Admin Task</span>' : `<span class="badge" style="background:#0284c7; color:#fff;">By: ${item.createdBy}</span>`;
-                
-                let isOverdue = item.dueDate < todayStr && item.status !== 'Completed';
-                let overdueBadge = isOverdue ? `<span class="badge badge-overdue">Overdue Red Alert</span>` : '';
+            if (currentRole === 'admin') {
+                // Group tasks by student / assignedTo or createdBy
+                let studentGroups = {};
+                data.forEach(item => {
+                    let key = item.assignedTo && item.assignedTo !== 'ALL' ? item.assignedTo : (item.createdBy || 'General / Broadcast');
+                    if (!studentGroups[key]) studentGroups[key] = [];
+                    studentGroups[key].push(item);
+                });
 
-                let statusButtonHtml = '';
-                if (item.status === 'Completed') {
-                    statusButtonHtml = `<span class="badge" style="background:#10b981; color:#fff;">Completed (Locked)</span>`;
-                } else {
-                    statusButtonHtml = `<button onclick="markCompleted(${item.id})" class="btn btn-primary" style="padding: 4px 10px; font-size: 0.78rem; background: #10b981 !important;">Mark Completed</button>`;
-                }
+                // Also include registered students who have 0 tasks yet so admin sees everyone
+                Object.keys(registeredUsers).forEach(email => {
+                    if (!studentGroups[email]) studentGroups[email] = [];
+                });
 
-                let deleteButtonHtml = '';
-                if (currentRole === 'student' && item.role === 'admin') {
-                    deleteButtonHtml = `<span style="font-size: 0.75rem; color: var(--text-muted);"><i class="fa-solid fa-lock"></i></span>`;
-                } else {
-                    deleteButtonHtml = `<button onclick="deleteSchedule(${item.id})" style="background: transparent; border: none; color: #ef4444; cursor: pointer; font-size: 0.95rem;"><i class="fa-solid fa-trash-can"></i></button>`;
-                }
+                Object.keys(studentGroups).forEach((studentEmail, idx) => {
+                    let studentTasks = studentGroups[studentEmail];
+                    let completedCount = studentTasks.filter(t => t.status === 'Completed').length;
+                    let notCompletedCount = studentTasks.length - completedCount;
 
-                grid.innerHTML += `
-                    <div class="glass-panel" style="padding: 22px; margin-bottom: 0; ${isOverdue ? 'border: 2px solid #ef4444;' : ''}">
-                        <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                            <h5 style="font-weight: 700; margin: 0; font-size: 1rem;">🚀 ${item.title}</h5>
-                            ${deleteButtonHtml}
+                    let tasksHtml = '';
+                    if (studentTasks.length === 0) {
+                        tasksHtml = `<div style="grid-column: span 2; text-align: center; padding: 20px; color: var(--text-muted); font-size: 0.88rem;">No tasks submitted or assigned for this student yet.</div>`;
+                    } else {
+                        studentTasks.forEach(item => {
+                            let badgeType = item.role === 'admin' ? '<span class="badge" style="background:#8b5cf6; color:#fff;">Admin Task</span>' : `<span class="badge" style="background:#0284c7; color:#fff;">By: ${item.createdBy}</span>`;
+                            let isOverdue = item.dueDate < todayStr && item.status !== 'Completed';
+                            let overdueBadge = isOverdue ? `<span class="badge badge-overdue">Overdue Red Alert</span>` : '';
+
+                            let statusButtonHtml = item.status === 'Completed' ? 
+                                `<span class="badge" style="background:#10b981; color:#fff;">Completed (Locked)</span>` : 
+                                `<button onclick="markCompleted(${item.id})" class="btn btn-primary" style="padding: 4px 10px; font-size: 0.78rem; background: #10b981 !important;">Mark Completed</button>`;
+
+                            tasksHtml += `
+                                <div class="glass-panel" style="padding: 18px; margin-bottom: 0; ${isOverdue ? 'border: 2.5px solid #ef4444;' : ''}">
+                                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px;">
+                                        <h5 style="font-weight: 700; margin: 0; font-size: 0.95rem;">🚀 ${item.title}</h5>
+                                        <button onclick="deleteSchedule(${item.id})" style="background: transparent; border: none; color: #ef4444; cursor: pointer; font-size: 0.9rem;"><i class="fa-solid fa-trash-can"></i></button>
+                                    </div>
+                                    <div style="display: flex; gap: 6px; margin-bottom: 10px; flex-wrap: wrap;">
+                                        <span class="badge badge-priority-${item.priority}">${item.priority}</span>
+                                        <span class="badge badge-cat">${item.category}</span>
+                                        ${badgeType}
+                                        ${overdueBadge}
+                                    </div>
+                                    <div style="font-size: 0.8rem; color: var(--text-muted); margin-bottom: 8px;">
+                                        <i class="fa-regular fa-calendar me-1"></i>${item.dueDate} | <i class="fa-regular fa-clock me-1"></i>${item.startTime} - ${item.endTime} (${(item.hours || 8).toFixed(1)} hrs)
+                                    </div>
+                                    <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1.5px solid var(--glass-border); padding-top: 8px; margin-top: 8px;">
+                                        <span style="font-size: 0.76rem; font-weight: 600;">Status: <span style="color: var(--primary-blue);">${item.status}</span></span>
+                                        ${statusButtonHtml}
+                                    </div>
+                                </div>
+                            `;
+                        });
+                    }
+
+                    container.innerHTML += `
+                        <div class="student-group-card">
+                            <div class="student-group-header" onclick="toggleStudentAccordion(this)">
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <div style="width: 38px; height: 38px; border-radius: 10px; background: rgba(0, 102, 255, 0.15); display: flex; align-items: center; justify-content: center; color: var(--primary-blue); font-weight: 800;">
+                                        <i class="fa-solid fa-user-graduate"></i>
+                                    </div>
+                                    <div>
+                                        <h5 style="margin: 0; font-weight: 800; font-size: 1rem; color: var(--text-main);">${studentEmail}</h5>
+                                        <span style="font-size: 0.78rem; color: var(--text-muted);">Total Tasks: ${studentTasks.length}</span>
+                                    </div>
+                                </div>
+                                <div style="display: flex; align-items: center; gap: 12px;">
+                                    <span class="badge" style="background: #10b981; color: #fff;">Completed: ${completedCount}</span>
+                                    <span class="badge" style="background: #f59e0b; color: #fff;">Not Completed: ${notCompletedCount}</span>
+                                    <i class="fa-solid fa-chevron-down" style="transition: transform 0.3s ease;"></i>
+                                </div>
+                            </div>
+                            <div class="student-tasks-container">
+                                ${tasksHtml}
+                            </div>
                         </div>
-                        <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
-                            <span class="badge badge-priority-${item.priority}">${item.priority}</span>
-                            <span class="badge badge-cat">${item.category}</span>
-                            ${badgeType}
-                            ${overdueBadge}
+                    `;
+                });
+
+            } else {
+                // Student View: Flat clean grid
+                let gridHtml = `<div style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px;" id="studentGridInner"></div>`;
+                container.innerHTML = gridHtml;
+                const innerGrid = document.getElementById("studentGridInner");
+
+                data.forEach(item => {
+                    let badgeType = item.role === 'admin' ? '<span class="badge" style="background:#8b5cf6; color:#fff;">Admin Task</span>' : `<span class="badge" style="background:#0284c7; color:#fff;">By: ${item.createdBy}</span>`;
+                    let isOverdue = item.dueDate < todayStr && item.status !== 'Completed';
+                    let overdueBadge = isOverdue ? `<span class="badge badge-overdue">Overdue Red Alert</span>` : '';
+
+                    let statusButtonHtml = item.status === 'Completed' ? 
+                        `<span class="badge" style="background:#10b981; color:#fff;">Completed (Locked)</span>` : 
+                        `<button onclick="markCompleted(${item.id})" class="btn btn-primary" style="padding: 4px 10px; font-size: 0.78rem; background: #10b981 !important;">Mark Completed</button>`;
+
+                    let deleteBtn = item.role === 'admin' ? 
+                        `<span style="font-size: 0.75rem; color: var(--text-muted);"><i class="fa-solid fa-lock"></i></span>` : 
+                        `<button onclick="deleteSchedule(${item.id})" style="background: transparent; border: none; color: #ef4444; cursor: pointer; font-size: 0.95rem;"><i class="fa-solid fa-trash-can"></i></button>`;
+
+                    innerGrid.innerHTML += `
+                        <div class="glass-panel" style="padding: 22px; margin-bottom: 0; ${isOverdue ? 'border: 2.5px solid #ef4444;' : ''}">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                                <h5 style="font-weight: 700; margin: 0; font-size: 1rem;">🚀 ${item.title}</h5>
+                                ${deleteBtn}
+                            </div>
+                            <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
+                                <span class="badge badge-priority-${item.priority}">${item.priority}</span>
+                                <span class="badge badge-cat">${item.category}</span>
+                                ${badgeType}
+                                ${overdueBadge}
+                            </div>
+                            <div style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 10px;">
+                                <i class="fa-regular fa-calendar me-1"></i>${item.dueDate} | <i class="fa-regular fa-clock me-1"></i>${item.startTime} - ${item.endTime} (${(item.hours || 8).toFixed(1)} hrs)
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1.5px solid var(--glass-border); padding-top: 10px; margin-top: 10px;">
+                                <span style="font-size: 0.78rem; font-weight: 600;">Status: <span style="color: var(--primary-blue);">${item.status}</span></span>
+                                ${statusButtonHtml}
+                            </div>
                         </div>
-                        <div style="font-size: 0.82rem; color: var(--text-muted); margin-bottom: 10px;">
-                            <i class="fa-regular fa-calendar me-1"></i>${item.dueDate} | <i class="fa-regular fa-clock me-1"></i>${item.startTime} - ${item.endTime} (${(item.hours || 8).toFixed(1)} hrs)
-                        </div>
-                        <div style="display: flex; justify-content: space-between; align-items: center; border-top: 1px solid var(--glass-border); padding-top: 10px; margin-top: 10px;">
-                            <span style="font-size: 0.78rem; font-weight: 600;">Status: <span style="color: var(--primary-blue);">${item.status}</span></span>
-                            ${statusButtonHtml}
-                        </div>
-                    </div>
-                `;
-            });
+                    `;
+                });
+            }
+        }
+
+        function toggleStudentAccordion(headerEl) {
+            headerEl.classList.toggle('active');
+            const tasksContainer = headerEl.nextElementSibling;
+            tasksContainer.classList.toggle('active');
+            const icon = headerEl.querySelector('.fa-chevron-down');
+            if (icon) {
+                icon.style.transform = tasksContainer.classList.contains('active') ? 'rotate(180deg)' : 'rotate(0deg)';
+            }
         }
 
         function markCompleted(id) {
@@ -1009,7 +1167,7 @@
             } else {
                 userEmails.forEach((email, index) => {
                     tbody.innerHTML += `
-                        <tr style="border-bottom: 1px solid rgba(255,255,255,0.1);">
+                        <tr style="border-bottom: 1.5px solid var(--glass-border);">
                             <td style="padding: 10px;">${index + 1}</td>
                             <td style="padding: 10px;">${email}</td>
                             <td style="padding: 10px;">${usersDB[email]}</td>
@@ -1030,7 +1188,7 @@
 
             doc.setFont("helvetica", "normal");
             doc.setFontSize(10);
-            doc.text("Generated Date: 2026-08-13", 14, 27);
+            doc.text("Generated Date: 2026-08-15", 14, 27);
 
             const usersDB = JSON.parse(localStorage.getItem('taskflow_users_db_fx')) || {};
             const userEmails = Object.keys(usersDB);
