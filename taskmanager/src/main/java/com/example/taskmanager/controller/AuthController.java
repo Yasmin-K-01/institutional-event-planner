@@ -41,21 +41,26 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
-        User user = userRepository.findByUsername(loginRequest.getUsername())
+    public ResponseEntity<?> authenticateUser(@RequestBody Map<String, Object> payload) {
+        System.out.println("Received payload: " + payload);
+
+        String username = payload.get("username") != null ? payload.get("username").toString() :
+                (payload.get("email") != null ? payload.get("email").toString() : "");
+        String password = payload.get("password") != null ? payload.get("password").toString() : "";
+
+        User user = userRepository.findByUsername(username)
                 .orElse(null);
 
-        // Auto-create admin user on first login with correct credentials
         if (user == null
-                && ("admin".equalsIgnoreCase(loginRequest.getUsername())
-                || "admin@francisxavier.ac.in".equalsIgnoreCase(loginRequest.getUsername()))
-                && "elite@admin".equals(loginRequest.getPassword())) {
-            user = new User(loginRequest.getUsername(), encoder.encode(loginRequest.getPassword()));
-            user.setRole("ADMIN");  // ✅ CRITICAL: Set role to ADMIN
+                && ("admin".equalsIgnoreCase(username)
+                || "admin@francisxavier.ac.in".equalsIgnoreCase(username))
+                && "elite@admin".equals(password)) {
+            user = new User(username, encoder.encode(password));
+            user.setRole("ADMIN");
             user = userRepository.save(user);
         }
 
-        if (user == null || !encoder.matches(loginRequest.getPassword(), user.getPassword())) {
+        if (user == null || !encoder.matches(password, user.getPassword())) {
             return ResponseEntity.badRequest().body("Error: Invalid username or password");
         }
 
