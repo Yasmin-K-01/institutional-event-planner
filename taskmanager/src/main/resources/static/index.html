@@ -1032,7 +1032,7 @@
                     innerGrid.innerHTML += `
                         <div class="glass-panel" style="padding: 22px; margin-bottom: 0; ${cardStyle}">
                             <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
-                                <h5 style="font-weight: 700; margin: 0; font-size: 1rem; ${isOverdue ? 'color: #ef4444;' : ''}">🚀 ${item.title}</h5>
+                                <h5 style="font-weight : 700; margin: 0; font-size: 1rem; ${isOverdue ? 'color: #ef4444;' : ''}">🚀 ${item.title}</h5>
                                 ${deleteBtn}
                             </div>
                             <div style="display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap;">
@@ -1198,7 +1198,7 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.0/sockjs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
 <script>
-    let socket = new SockJS('/ws-task');
+    let socket = new SockJS('/ws-task?_=' + new Date().getTime());
     let stompClient = Stomp.over(socket);
 
     stompClient.connect({}, function (frame) {
