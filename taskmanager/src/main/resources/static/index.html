@@ -1211,16 +1211,31 @@
     });
 </script>
 <script>
-  const wsSocket = new SockJS('/ws-task');
-  const adminStompClient = Stomp.over(wsSocket);
+  function connectAdminWebSocket() {
+    const wsSocket = new SockJS('https://smart-task-manager-rnxh.onrender.com/ws-task');
+    const adminStompClient = Stomp.over(wsSocket);
 
-  adminStompClient.connect({}, function (frame) {
-      console.log('Connected: ' + frame);
-      adminStompClient.subscribe('/topic/admin-tasks', function (taskMessage) {
-          let task = JSON.parse(taskMessage.body);
-          appendTaskToAdminTable(task);
-      });
-  });
+    // டிபக் லாக்குகளை ஆஃப் செய்ய (தேவையற்ற கன்சோல் மெசேஜ்களை தவிர்க்க)
+    adminStompClient.debug = null;
+
+    adminStompClient.connect({}, function (frame) {
+        console.log('Admin WebSocket Connected Successfully!');
+        
+        adminStompClient.subscribe('/topic/admin-tasks', function (taskMessage) {
+            let task = JSON.parse(taskMessage.body);
+            // டாஸ்க் வந்தவுடன் அட்மின் டேபிளில் ஆட்டோமேட்டிக்காகக் காட்டும் ஃபங்ஷன்
+            appendTaskToAdminTable(task);
+        });
+
+    }, function (error) {
+        // கનેக்ஷன் துண்டிக்கப்பட்டால் 5 விநாடிகளுக்குப் பிறகு தானாக மீண்டும் கனெக்ட் ஆகும்
+        console.log('WebSocket Disconnected! Reconnecting in 5 seconds...', error);
+        setTimeout(connectAdminWebSocket, 5000);
+    });
+  }
+
+  // பேஜ் ஓபன் ஆனதும் கனெக்ஷனைத் தொடங்குகிறோம்
+  connectAdminWebSocket();
 </script>
 </body>
 </html>
