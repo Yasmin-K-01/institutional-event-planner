@@ -24,6 +24,7 @@ import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.properties.UnitValue;
 
 import java.io.ByteArrayOutputStream;
+import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -60,19 +61,19 @@ public class TaskController {
     public List<Task> getAllTasks() {
         String username = getCurrentUsername();
         
-        // Admin user அல்லது anonymous User ஆக இருந்தால் அனைத்து டாஸ்க்குகளையும் அனுப்பும்
-        if ("anonymousUser".equalsIgnoreCase(username) || 
-            "admin".equalsIgnoreCase(username) || 
-            username.toLowerCase().contains("admin")) {
+        // 1. லாகின் செய்யாத பயனர் (anonymousUser) என்றால் டேட்டா எதுவும் அனுப்பக்கூடாது
+        if ("anonymousUser".equalsIgnoreCase(username)) {
+            return Collections.emptyList();
+        }
+        
+        // 2. Admin லாகின் செய்திருந்தால் மட்டுமே அனைத்து டாஸ்க்குகளையும் அனுப்ப வேண்டும்
+        if ("admin".equalsIgnoreCase(username) || username.toLowerCase().contains("admin")) {
             return taskRepository.findAll();
         }
         
-        // குறிப்பிட்ட Student-ஆக இருந்தால் அவர்களுக்குரிய டாஸ்க்குகளை மட்டும் ஃபில்டர் செய்து அனுப்பும்
+        // 3. Student லாகின் செய்திருந்தால், அந்த மாணவருக்குரிய டாஸ்க்குகளை மட்டுமே அனுப்ப வேண்டும்
         return taskRepository.findAll().stream()
-                .filter(t -> t.getUser() == null || 
-                        "admin".equalsIgnoreCase(t.getUser().getUsername()) || 
-                        t.getUser().getUsername().toLowerCase().contains("admin") ||
-                        username.equalsIgnoreCase(t.getUser().getUsername()))
+                .filter(t -> t.getUser() != null && username.equalsIgnoreCase(t.getUser().getUsername()))
                 .collect(Collectors.toList());
     }
 
@@ -123,7 +124,7 @@ public class TaskController {
 
     @PostMapping("/assign")
     public Task assignTask(@RequestBody Task task) {
-        // மாணவருக்கு டாஸ்க் அசைன் செய்யப்படும்போது அட்மின் பெயர் ஓவர்ரைட் ஆகாமல் தடுக்க
+        // மாணவருக்கு டாஸ்க் அசைன் செய்யும்போது Admin ID மேல்எழுதப்படாமல் (Overwrite) இருக்க
         if (task.getUser() != null && task.getUser().getId() != null) {
             User student = userRepository.findById(task.getUser().getId()).orElse(null);
             task.setUser(student);
