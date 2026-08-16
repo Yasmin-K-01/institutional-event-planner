@@ -78,25 +78,40 @@ public class TaskController {
     public List<Task> getAllTasks() {
         String username = getCurrentUsername();
         
-        // 1. लॉगिन न किया गया उपयोगकर्ता (anonymousUser) को कोई डेटा नहीं भेजना चाहिए
+        // 1. Anonymous users should not see any data
         if ("anonymousUser".equalsIgnoreCase(username)) {
             return Collections.emptyList();
         }
         
-        // 2. डेटाबेस से उपयोगकर्ता इकाई प्राप्त करें
+        // 2. Fetch user from database
         User user = userRepository.findByUsername(username).orElse(null);
         
-        // 3. जांचें कि यदि उपयोगकर्ता एडमिन है तो सभी कार्य वापस करें
+        // 3. Admin sees all tasks
         if (isAdmin(username, user)) {
             return taskRepository.findAll();
         }
         
-        // 4. छात्र/नियमित उपयोगकर्ता के लिए, केवल उनके कार्य फ़िल्टर करें
+        // 4. Regular user: Show tasks where they are the user, creator, or assigned recipient
         return taskRepository.findAll().stream()
-                .filter(t -> (t.getUser() != null && username.equalsIgnoreCase(t.getUser().getUsername()))
-                        || username.equalsIgnoreCase(t.getCreatedBy())
-                        || username.equalsIgnoreCase(t.getAssignedTo())
-                        || "ALL".equalsIgnoreCase(t.getAssignedTo()))
+                .filter(t -> {
+                    // Check if user is the task owner (t.getUser())
+                    if (t.getUser() != null && username.equalsIgnoreCase(t.getUser().getUsername())) {
+                        return true;
+                    }
+                    // Check if user created the task
+                    if (username.equalsIgnoreCase(t.getCreatedBy())) {
+                        return true;
+                    }
+                    // Check if task is assigned to this user by username (MOST IMPORTANT FOR CROSS-DEVICE)
+                    if (t.getAssignedTo() != null && username.equalsIgnoreCase(t.getAssignedTo())) {
+                        return true;
+                    }
+                    // Check if task is assigned to ALL users
+                    if ("ALL".equalsIgnoreCase(t.getAssignedTo())) {
+                        return true;
+                    }
+                    return false;
+                })
                 .collect(Collectors.toList());
     }
 
@@ -158,25 +173,44 @@ public class TaskController {
 
     @PostMapping("/assign")
     public Task assignTask(@RequestBody Task task) {
-        // மாணவருக்கு டாஸ்க் அசைன் செய்யும்போது Admin ID மேல்எழுதப்படாமல் (Overwrite) இருக்க
+        String username = getCurrentUsername();
+        
+        // Verify admin permission
+        User currentUser = userRepository.findByUsername(username).orElse(null);
+        if (!isAdmin(username, currentUser)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin login required to assign tasks");
+        }
+        
+        // Assign task to the specified user
         if (task.getUser() != null && task.getUser().getId() != null) {
             User student = userRepository.findById(task.getUser().getId()).orElse(null);
             task.setUser(student);
+            // CRITICAL: Set assignedTo to the username so task is visible across all devices
+            if (student != null) {
+                task.setAssignedTo(student.getUsername());
+            }
         } else if (task.getUser() != null && task.getUser().getUsername() != null) {
             User student = userRepository.findByUsername(task.getUser().getUsername()).orElse(null);
             task.setUser(student);
+            // CRITICAL: Set assignedTo to the username so task is visible across all devices
+            if (student != null) {
+                task.setAssignedTo(student.getUsername());
+            }
         }
 
         if (task.getCategory() == null || task.getCategory().isEmpty()) {
             task.setCategory("General");
         }
         if (task.getStatus() == null || task.getStatus().isEmpty()) {
-            task.setStatus("TODO");
+            task.setStatus("In Progress");
         }
+        task.setRole("admin");
+        task.setCreatedBy(username);
 
         Task savedTask = taskRepository.save(task);
         
         messagingTemplate.convertAndSend("/topic/admin-tasks", savedTask);
+        messagingTemplate.convertAndSend("/topic/tasks", savedTask);
         
         return savedTask;
     }
