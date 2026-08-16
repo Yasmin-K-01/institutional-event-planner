@@ -39,6 +39,9 @@ public class TaskController {
     private final AIService aiService;
     private final EmailService emailService;
 
+    @Autowired
+    private SimpMessagingTemplate messagingTemplate;
+
     public TaskController(TaskRepository taskRepository, UserRepository userRepository, AIService aiService, EmailService emailService) {
         this.taskRepository = taskRepository;
         this.userRepository = userRepository;
@@ -57,15 +60,18 @@ public class TaskController {
     public List<Task> getAllTasks() {
         String username = getCurrentUsername();
         
-        // Admin அல்லது Anonymous user ஆக இருந்தால் அனைத்து பயனர்களின் Tasks-யும் காண்பிக்கப்படும்
-        if ("anonymousUser".equalsIgnoreCase(username) || "admin".equalsIgnoreCase(username)) {
+        // Admin user அல்லது anonymous User ஆக இருந்தால் அனைத்து டாஸ்க்குகளையும் அனுப்பும்
+        if ("anonymousUser".equalsIgnoreCase(username) || 
+            "admin".equalsIgnoreCase(username) || 
+            username.toLowerCase().contains("admin")) {
             return taskRepository.findAll();
         }
         
-        // சாதாரண பயனர்களுக்கு: அவர்களின் சொந்த Tasks + Admin உருவாக்கிய Tasks
+        // குறிப்பிட்ட Student-ஆக இருந்தால் அவர்களுக்குரிய டாஸ்க்குகளை மட்டும் ஃபில்டர் செய்து அனுப்பும்
         return taskRepository.findAll().stream()
                 .filter(t -> t.getUser() == null || 
                         "admin".equalsIgnoreCase(t.getUser().getUsername()) || 
+                        t.getUser().getUsername().toLowerCase().contains("admin") ||
                         username.equalsIgnoreCase(t.getUser().getUsername()))
                 .collect(Collectors.toList());
     }
@@ -113,6 +119,31 @@ public class TaskController {
                 "Hello " + username + ",\nYour task '" + saved.getTitle() + "' was successfully created.");
 
         return saved;
+    }
+
+    @PostMapping("/assign")
+    public Task assignTask(@RequestBody Task task) {
+        // மாணவருக்கு டாஸ்க் அசைன் செய்யப்படும்போது அட்மின் பெயர் ஓவர்ரைட் ஆகாமல் தடுக்க
+        if (task.getUser() != null && task.getUser().getId() != null) {
+            User student = userRepository.findById(task.getUser().getId()).orElse(null);
+            task.setUser(student);
+        } else if (task.getUser() != null && task.getUser().getUsername() != null) {
+            User student = userRepository.findByUsername(task.getUser().getUsername()).orElse(null);
+            task.setUser(student);
+        }
+
+        if (task.getCategory() == null || task.getCategory().isEmpty()) {
+            task.setCategory("General");
+        }
+        if (task.getStatus() == null || task.getStatus().isEmpty()) {
+            task.setStatus("TODO");
+        }
+
+        Task savedTask = taskRepository.save(task);
+        
+        messagingTemplate.convertAndSend("/topic/admin-tasks", savedTask);
+        
+        return savedTask;
     }
 
     @PatchMapping("/{id}/status")
@@ -204,17 +235,4 @@ public class TaskController {
                 .headers(headers)
                 .body(out.toByteArray());
     }
-
-    @Autowired
-private SimpMessagingTemplate messagingTemplate;
-
-@PostMapping("/assign")
-public Task assignTask(@RequestBody Task task) {
-    Task savedTask = taskRepository.save(task);
-    
-    // Live-a admin portal-ku broadcast panrathu
-    messagingTemplate.convertAndSend("/topic/admin-tasks", savedTask);
-    
-    return savedTask;
-}
 }
