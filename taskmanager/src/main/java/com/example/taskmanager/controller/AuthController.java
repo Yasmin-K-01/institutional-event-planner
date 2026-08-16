@@ -44,11 +44,14 @@ public class AuthController {
         User user = userRepository.findByUsername(loginRequest.getUsername())
                 .orElse(null);
 
+        // Auto-create admin user on first login with correct credentials
         if (user == null
                 && ("admin".equalsIgnoreCase(loginRequest.getUsername())
                 || "admin@francisxavier.ac.in".equalsIgnoreCase(loginRequest.getUsername()))
                 && "elite@admin".equals(loginRequest.getPassword())) {
-            user = userRepository.save(new User(loginRequest.getUsername(), encoder.encode(loginRequest.getPassword())));
+            user = new User(loginRequest.getUsername(), encoder.encode(loginRequest.getPassword()));
+            user.setRole("ADMIN");  // ✅ CRITICAL: Set role to ADMIN
+            user = userRepository.save(user);
         }
 
         if (user == null || !encoder.matches(loginRequest.getPassword(), user.getPassword())) {
@@ -60,6 +63,7 @@ public class AuthController {
         Map<String, Object> response = new HashMap<>();
         response.put("token", jwt);
         response.put("username", user.getUsername());
+        response.put("role", user.getRole());
 
         return ResponseEntity.ok(response);
     }
