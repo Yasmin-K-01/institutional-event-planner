@@ -1198,17 +1198,51 @@
     <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.5.0/sockjs.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
 <script>
-    let socket = new SockJS('/ws-task?_=' + new Date().getTime());
-    let stompClient = Stomp.over(socket);
+    // 1. சர்வரில் இருந்து லேட்டஸ்ட் டாஸ்க் டேட்டாவை ஃபெட்ச் செய்யும் பங்க்ஷன்
+    function loadUserData() {
+        fetch('/api/tasks?_=' + new Date().getTime(), {
+            headers: {
+                'Authorization': 'Bearer ' + localStorage.getItem('token')
+            }
+        })
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
+            // உங்கள் UI-இல் டாஸ்க் கார்டுகளை ரெண்டர் செய்யும் ஃபங்ஷனை இங்கே கூப்பிடுங்கள்
+            // (எ.கா: loadAdminDashboard(data) அல்லது renderTasks(data))
+            if (typeof loadAdminDashboard === 'function') {
+                loadAdminDashboard(data);
+            }
+        })
+        .catch(err => console.error("Error loading tasks:", err));
+    }
 
-    stompClient.connect({}, function (frame) {
-        console.log('Connected: ' + frame);
-        stompClient.subscribe('/topic/admin-tasks', function (taskMessage) {
-            let task = JSON.parse(taskMessage.body);
-            // Refresh or append task to Admin UI dynamically without reload
-            appendTaskToAdminTable(task);
-        });
+    // 2. பேஜ் லோட் ஆகும்போது இந்த ஃபங்ஷனை இயக்க வேண்டும்
+    document.addEventListener('DOMContentLoaded', function () {
+        loadUserData();
     });
+</script>
+<script>
+   // பழைய கோடு:
+// let socket = new SockJS('/ws-task');
+
+// புதிய கோடு (Cache & Multi-device Sync Issue-ஐ தவிர்க்க):
+let socket = new SockJS('/ws-task?t=' + new Date().getTime());
+let stompClient = Stomp.over(socket);
+
+stompClient.connect({}, function (frame) {
+    console.log('Connected to WebSocket');
+    
+    // Admin மற்றும் Student இருவருக்கும் Real-time Task Sync ஆக Subscribe செய்கிறோம்
+    stompClient.subscribe('/topic/tasks', function (taskOutput) {
+        // சர்வரில் ஏதேனும் மாற்றம் நடந்தால் உடனே 2 சாதனங்களிலும் டேட்டா புதுப்பிக்கப்படும்
+        loadUserData(); 
+    });
+});
 </script>
 <script>
   function connectAdminWebSocket() {
