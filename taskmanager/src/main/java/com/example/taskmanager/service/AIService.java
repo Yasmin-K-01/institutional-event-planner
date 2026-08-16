@@ -1,5 +1,7 @@
 package com.example.taskmanager.service;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
@@ -12,13 +14,27 @@ import java.util.Map;
 @Service
 public class AIService {
 
+    private static final Logger logger = LoggerFactory.getLogger(AIService.class);
+
     @Value("${gemini.api.key:}")
     private String apiKey;
+
+    @Value("${app.ai.enabled:true}")
+    private boolean aiEnabled;
 
     private final RestTemplate restTemplate = new RestTemplate();
 
     public List<String> generateSubtasks(String taskTitle) {
         List<String> subtasks = new ArrayList<>();
+
+        // If AI service is disabled, return dev mock subtasks
+        if (!aiEnabled) {
+            logger.info("[OFFLINE MODE] Gemini API call skipped for task: {}", taskTitle);
+            subtasks.add("Task Planning (Dev Mock)");
+            subtasks.add("Execution (Dev Mock)");
+            subtasks.add("Review (Dev Mock)");
+            return subtasks;
+        }
 
         if (apiKey == null || apiKey.isEmpty()) {
             subtasks.add("Break down requirement");

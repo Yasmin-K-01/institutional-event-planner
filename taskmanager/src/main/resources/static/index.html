@@ -486,28 +486,131 @@
     </div>
 
     <script>
-        const defaultSchedules = [
-            { id: 1, title: 'IoT Gas Leakage Detector Prototype', dueDate: '2026-08-10', startTime: '09:00', endTime: '17:00', category: 'project', priority: 'High', status: 'Completed', role: 'admin', createdBy: 'Admin', assignedTo: 'ALL' },
-            { id: 2, title: 'Programming Loops & Conditions Drill', dueDate: '2026-08-15', startTime: '09:00', endTime: '13:00', category: 'academic', priority: 'Medium', status: 'In Progress', role: 'student', createdBy: 'student@francisxavier.ac.in', assignedTo: 'student@francisxavier.ac.in' },
-            { id: 3, title: 'git practice & repositories', dueDate: '2026-08-15', startTime: '13:30', endTime: '17:30', category: 'project', priority: 'Medium', status: 'In Progress', role: 'student', createdBy: 'student@francisxavier.ac.in', assignedTo: 'student@francisxavier.ac.in' },
-            { id: 4, title: 'whatsapp integration module', dueDate: '2026-08-13', startTime: '09:00', endTime: '17:00', category: 'project', priority: 'Medium', status: 'In Progress', role: 'student', createdBy: 'student@francisxavier.ac.in', assignedTo: 'student@francisxavier.ac.in' },
-            { id: 5, title: 'sensor testing', dueDate: '2026-08-13', startTime: '09:00', endTime: '17:00', category: 'project', priority: 'Medium', status: 'In Progress', role: 'student', createdBy: 'student@francisxavier.ac.in', assignedTo: 'student@francisxavier.ac.in' }
-        ];
+        const API_BASE = (window.ELITESCHEDULE_API_BASE || '').replace(/\/$/, '');
+        let schedules = [];
+        let registeredUsers = {};
 
-        let schedules = JSON.parse(localStorage.getItem('eliteschedule_schedules_fx')) || defaultSchedules;
-        let registeredUsers = JSON.parse(localStorage.getItem('eliteschedule_users_db_fx')) || {
-            'student@francisxavier.ac.in': '12345678',
-            'yasmink.ug.25.cs@francisxavier.ac.in': '12345678'
-        };
+        function apiUrl(path) {
+            return `${API_BASE}${path}`;
+        }
 
-        function saveSchedules() { localStorage.setItem('eliteschedule_schedules_fx', JSON.stringify(schedules)); }
-        function saveUsersDB() { localStorage.setItem('eliteschedule_users_db_fx', JSON.stringify(registeredUsers)); }
+        function getToken() {
+            return localStorage.getItem('token') || localStorage.getItem('eliteschedule_token_fx') || '';
+        }
+
+        function authHeaders(extra = {}) {
+            const token = getToken();
+            return token ? { ...extra, 'Authorization': `Bearer ${token}` } : extra;
+        }
+
+        function saveSchedules() {}
+        function saveUsersDB() {}
+
+        function toTitleCase(value, fallback = '') {
+            if (!value) return fallback;
+            const normalized = String(value).toLowerCase();
+            return normalized.charAt(0).toUpperCase() + normalized.slice(1);
+        }
+
+        function toUiTask(task) {
+            const username = task.user && task.user.username ? task.user.username : '';
+            const createdBy = task.createdBy || username || 'Admin';
+            const assignedTo = task.assignedTo || username || createdBy;
+            const status = task.completed || String(task.status || '').toUpperCase() === 'COMPLETED' ? 'Completed' : (task.status || 'In Progress');
+
+            return {
+                id: task.id,
+                title: task.title || '',
+                description: task.description || '',
+                dueDate: task.dueDate || '',
+                startTime: task.startTime || '',
+                endTime: task.endTime || '',
+                hours: task.hours || calculateHours(task.startTime || '00:00', task.endTime || '00:00'),
+                category: task.category || 'General',
+                priority: toTitleCase(task.priority, 'Medium'),
+                status,
+                role: task.role || (createdBy.toLowerCase().includes('admin') ? 'admin' : 'student'),
+                createdBy,
+                assignedTo
+            };
+        }
+
+        function toApiPriority(value) {
+            const priority = String(value || 'Medium').toUpperCase();
+            return ['LOW', 'MEDIUM', 'HIGH'].includes(priority) ? priority : 'MEDIUM';
+        }
+
+        async function parseApiResponse(response) {
+            const contentType = response.headers.get('content-type') || '';
+            const body = contentType.includes('application/json') ? await response.json() : await response.text();
+            if (!response.ok) {
+                throw new Error(typeof body === 'string' ? body : (body.message || 'Request failed'));
+            }
+            return body;
+        }
+
+        async function apiRequest(path, options = {}) {
+            const headers = authHeaders(options.headers || {});
+            const response = await fetch(apiUrl(path), { ...options, headers });
+            return parseApiResponse(response);
+        }
+
+        async function loadTasks(showError = false) {
+            if (!getToken()) {
+                schedules = [];
+                updateAllViews();
+                return;
+            }
+
+            try {
+                const data = await apiRequest(`/api/tasks?_=${Date.now()}`);
+                schedules = Array.isArray(data) ? data.map(toUiTask) : [];
+                updateAllViews();
+            } catch (error) {
+                if (showError) {
+                    const errBox = document.getElementById("formErrorMsg");
+                    errBox.innerText = `Could not load tasks: ${error.message}`;
+                    errBox.style.display = 'block';
+                }
+                console.error("Error loading tasks:", error);
+            }
+        }
+
+        async function loadRegisteredUsers() {
+            if (!getToken()) {
+                registeredUsers = {};
+                return;
+            }
+
+            try {
+                const users = await apiRequest('/api/auth/users');
+                registeredUsers = {};
+                users.forEach(email => registeredUsers[email] = 'Stored securely');
+                populateAdminStudentDropdown();
+            } catch (error) {
+                console.error("Error loading users:", error);
+            }
+        }
+
+        async function refreshServerData(showError = false) {
+            await loadRegisteredUsers();
+            await loadTasks(showError);
+        }
+
+        function loadAdminDashboard(data) {
+            schedules = Array.isArray(data) ? data.map(toUiTask) : [];
+            updateAllViews();
+        }
+
+        function appendTaskToAdminTable() {
+            loadTasks(false);
+        }
 
         let currentDate = new Date(2026, 7, 1);
         let statusChartInstance = null;
         let weeklyChartInstance = null;
 
-        document.addEventListener("DOMContentLoaded", () => {
+        document.addEventListener("DOMContentLoaded", async () => {
             document.getElementById('taskDate').value = "2026-08-15";
             document.getElementById('startTime').value = "";
             document.getElementById('endTime').value = "";
@@ -517,6 +620,7 @@
 
             checkAuthStatus();
             initCharts();
+            await refreshServerData(true);
             updateAllViews();
             updateDailyGoalDisplay();
         });
@@ -526,12 +630,12 @@
             document.getElementById('dashboardView').classList.remove('active');
         }
 
-        function goToDashboard() {
+        async function goToDashboard() {
             const user = localStorage.getItem('eliteschedule_user_fx');
             if (user) {
                 document.getElementById('landingView').style.display = 'none';
                 document.getElementById('dashboardView').classList.add('active');
-                updateAllViews();
+                await refreshServerData(true);
                 updateDailyGoalDisplay();
             } else {
                 openModal('studentLoginModal');
@@ -589,12 +693,34 @@
             }
         }
 
+        async function loginWithBackend(username, password) {
+            const data = await apiRequest('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('eliteschedule_token_fx', data.token);
+            localStorage.setItem('eliteschedule_user_fx', data.username || username);
+        }
+
+        async function registerWithBackend(username, password) {
+            await apiRequest('/api/auth/register', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ username, password })
+            });
+        }
+
         // Student Login Handler
-        document.getElementById("studentLoginForm").addEventListener("submit", (e) => {
+        document.getElementById("studentLoginForm").addEventListener("submit", async (e) => {
             e.preventDefault();
             const username = document.getElementById("studentLoginEmail").value.trim().toLowerCase();
             const password = document.getElementById("studentLoginPass").value;
             const errDiv = document.getElementById("studentLoginError");
+            errDiv.style.display = 'none';
+            errDiv.innerText = "";
 
             const fxEmailRegex = /^[a-z0-9._]+\.ug\.\d{2}\.[a-z]+\@francisxavier\.ac\.in$/i;
             if (!fxEmailRegex.test(username) && username !== 'student@francisxavier.ac.in') {
@@ -603,29 +729,35 @@
                 return;
             }
 
-            if (!registeredUsers[username]) {
-                registeredUsers[username] = password;
-                saveUsersDB();
-            } else if (registeredUsers[username] !== password) {
-                errDiv.innerText = "Incorrect password!";
+            try {
+                try {
+                    await loginWithBackend(username, password);
+                } catch (loginError) {
+                    await registerWithBackend(username, password);
+                    await loginWithBackend(username, password);
+                }
+            } catch (error) {
+                errDiv.innerText = "Incorrect password or backend login failed.";
                 errDiv.style.display = 'block';
                 return;
             }
 
-            localStorage.setItem('eliteschedule_user_fx', username);
             localStorage.setItem('eliteschedule_role_fx', 'student');
             
             closeModal('studentLoginModal');
+            await refreshServerData(true);
             checkAuthStatus();
-            goToDashboard();
+            await goToDashboard();
         });
 
         // Admin Login Handler
-        document.getElementById("adminLoginForm").addEventListener("submit", (e) => {
+        document.getElementById("adminLoginForm").addEventListener("submit", async (e) => {
             e.preventDefault();
             const username = document.getElementById("adminUser").value.trim();
             const password = document.getElementById("adminPass").value;
             const errDiv = document.getElementById("adminLoginError");
+            errDiv.style.display = 'none';
+            errDiv.innerText = "";
 
             if (username.toLowerCase() !== 'admin' && username.toLowerCase() !== 'admin@francisxavier.ac.in') {
                 errDiv.innerText = "Incorrect username or password!";
@@ -639,20 +771,30 @@
                 return;
             }
 
-            localStorage.setItem('eliteschedule_user_fx', username);
+            try {
+                await loginWithBackend(username, password);
+            } catch (error) {
+                errDiv.innerText = "Admin backend login failed.";
+                errDiv.style.display = 'block';
+                return;
+            }
+
             localStorage.setItem('eliteschedule_role_fx', 'admin');
             
             closeModal('adminLoginModal');
+            await refreshServerData(true);
             checkAuthStatus();
-            goToDashboard();
+            await goToDashboard();
         });
 
         // Student Registration Handler
-        document.getElementById("registerForm").addEventListener("submit", (e) => {
+        document.getElementById("registerForm").addEventListener("submit", async (e) => {
             e.preventDefault();
             const email = document.getElementById("regEmail").value.trim().toLowerCase();
             const password = document.getElementById("regPass").value;
             const errDiv = document.getElementById("registerError");
+            errDiv.style.display = 'none';
+            errDiv.innerText = "";
             
             if (password.length !== 8) {
                 errDiv.innerText = "Password must be fixed size 8 characters long.";
@@ -667,20 +809,29 @@
                 return;
             }
 
-            registeredUsers[email] = password;
-            saveUsersDB();
+            try {
+                await registerWithBackend(email, password);
+                await loginWithBackend(email, password);
+            } catch (error) {
+                errDiv.innerText = error.message || "Registration failed.";
+                errDiv.style.display = 'block';
+                return;
+            }
 
-            localStorage.setItem('eliteschedule_user_fx', email);
             localStorage.setItem('eliteschedule_role_fx', 'student');
             
             closeModal('registerModal');
+            await refreshServerData(true);
             checkAuthStatus();
-            goToDashboard();
+            await goToDashboard();
         });
 
         function logout() {
             localStorage.removeItem('eliteschedule_user_fx');
             localStorage.removeItem('eliteschedule_role_fx');
+            localStorage.removeItem('eliteschedule_token_fx');
+            localStorage.removeItem('token');
+            schedules = [];
             checkAuthStatus();
             showHome();
         }
@@ -745,7 +896,7 @@
             }
         }
 
-        document.getElementById("hourlyLogForm").addEventListener("submit", (e) => {
+        document.getElementById("hourlyLogForm").addEventListener("submit", async (e) => {
             e.preventDefault();
             const errBox = document.getElementById("formErrorMsg");
             errBox.style.display = 'none';
@@ -787,13 +938,41 @@
                 assignedTo: assignedToUser
             };
 
-            schedules.push(newLog);
-            saveSchedules();
-            document.getElementById("taskDesc").value = "";
-            document.getElementById("startTime").value = "";
-            document.getElementById("endTime").value = "";
-            updateAllViews();
-            updateDailyGoalDisplay();
+            const payload = {
+                title: newLog.title,
+                description: newLog.title,
+                dueDate: newLog.dueDate,
+                startTime: newLog.startTime,
+                endTime: newLog.endTime,
+                hours: newLog.hours,
+                category: newLog.category,
+                priority: toApiPriority(newLog.priority),
+                status: newLog.status,
+                role: newLog.role,
+                createdBy: newLog.createdBy,
+                assignedTo: newLog.assignedTo
+            };
+
+            if (currentRole === 'admin' && assignedToUser !== 'ALL') {
+                payload.user = { username: assignedToUser };
+            }
+
+            try {
+                const endpoint = currentRole === 'admin' ? '/api/tasks/assign' : '/api/tasks';
+                await apiRequest(endpoint, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify(payload)
+                });
+
+                document.getElementById("taskDesc").value = "";
+                document.getElementById("startTime").value = "";
+                document.getElementById("endTime").value = "";
+                await loadTasks(true);
+            } catch (error) {
+                errBox.innerText = `Task was not saved: ${error.message}`;
+                errBox.style.display = 'block';
+            }
         });
 
         function updateAllViews() {
@@ -1064,36 +1243,40 @@
             }
         }
 
-        function markCompleted(id) {
+        async function markCompleted(id) {
             const item = schedules.find(s => s.id === id);
             if (item && item.status !== 'Completed') {
-                item.status = 'Completed';
-                saveSchedules();
-                updateAllViews();
-                updateDailyGoalDisplay();
+                try {
+                    await apiRequest(`/api/tasks/${id}/status`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ status: 'Completed' })
+                    });
+                    await loadTasks(true);
+                } catch (error) {
+                    alert(`Could not update task: ${error.message}`);
+                }
             }
         }
 
-        function deleteSchedule(id) {
+        async function deleteSchedule(id) {
             const item = schedules.find(s => s.id === id);
             const currentRole = localStorage.getItem('eliteschedule_role_fx');
             if (currentRole === 'student' && item && item.role === 'admin') {
                 alert("Students cannot delete admin tasks!");
                 return;
             }
-            schedules = schedules.filter(s => s.id !== id);
-            saveSchedules();
-            updateAllViews();
-            updateDailyGoalDisplay();
+            try {
+                await apiRequest(`/api/tasks/${id}`, { method: 'DELETE' });
+                await loadTasks(true);
+            } catch (error) {
+                alert(`Could not delete task: ${error.message}`);
+            }
         }
 
         function removeRegisteredStudent(email) {
             if (confirm(`Are you sure you want to remove student: ${email}? This will also delete all tasks associated with this student.`)) {
                 delete registeredUsers[email];
-                saveUsersDB();
-
-                schedules = schedules.filter(s => s.createdBy !== email && s.assignedTo !== email);
-                saveSchedules();
 
                 openUsersModal(); 
                 populateAdminStudentDropdown();
@@ -1102,8 +1285,9 @@
             }
         }
 
-        function openUsersModal() {
-            const usersDB = JSON.parse(localStorage.getItem('eliteschedule_users_db_fx')) || {};
+        async function openUsersModal() {
+            await loadRegisteredUsers();
+            const usersDB = registeredUsers;
             const userEmails = Object.keys(usersDB);
             
             document.getElementById('registeredUsersCountText').innerText = `Total Registered Students: ${userEmails.length}`;
@@ -1144,7 +1328,7 @@
             doc.setFontSize(10);
             doc.text("Generated Date: 2026-08-15", 14, 27);
 
-            const usersDB = JSON.parse(localStorage.getItem('eliteschedule_users_db_fx')) || {};
+            const usersDB = registeredUsers;
             const userEmails = Object.keys(usersDB);
             
             doc.setFont("helvetica", "bold");

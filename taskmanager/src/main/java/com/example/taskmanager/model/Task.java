@@ -24,6 +24,12 @@ public class Task {
     private boolean completed;
     private String category;
     private String status;
+    private String startTime;
+    private String endTime;
+    private Double hours;
+    private String role;
+    private String createdBy;
+    private String assignedTo;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id")
@@ -62,6 +68,24 @@ public class Task {
 
     public String getStatus() { return status; }
     public void setStatus(String status) { this.status = status; }
+
+    public String getStartTime() { return startTime; }
+    public void setStartTime(String startTime) { this.startTime = startTime; }
+
+    public String getEndTime() { return endTime; }
+    public void setEndTime(String endTime) { this.endTime = endTime; }
+
+    public Double getHours() { return hours; }
+    public void setHours(Double hours) { this.hours = hours; }
+
+    public String getRole() { return role; }
+    public void setRole(String role) { this.role = role; }
+
+    public String getCreatedBy() { return createdBy; }
+    public void setCreatedBy(String createdBy) { this.createdBy = createdBy; }
+
+    public String getAssignedTo() { return assignedTo; }
+    public void setAssignedTo(String assignedTo) { this.assignedTo = assignedTo; }
 
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }

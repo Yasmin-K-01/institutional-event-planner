@@ -1,0 +1,22 @@
+{
+  "groups": [
+    {
+      "name": "app",
+      "description": "Custom application properties for Task Manager"
+    }
+  ],
+  "properties": [
+    {
+      "name": "app.ai.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Enable or disable AI service (Gemini API) for generating subtasks",
+      "defaultValue": true
+    },
+    {
+      "name": "app.email.enabled",
+      "type": "java.lang.Boolean",
+      "description": "Enable or disable email service for sending task notifications",
+      "defaultValue": true
+    }
+  ]
+}

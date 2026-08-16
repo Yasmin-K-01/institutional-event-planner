@@ -10,11 +10,13 @@ import com.example.taskmanager.service.EmailService;
 
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.server.ResponseStatusException;
 
 import com.itextpdf.kernel.pdf.PdfDocument;
 import com.itextpdf.kernel.pdf.PdfWriter;
@@ -57,23 +59,44 @@ public class TaskController {
         return SecurityContextHolder.getContext().getAuthentication().getName();
     }
 
+    private boolean isAdmin(String username, User user) {
+        // Check if username contains "admin" (case-insensitive)
+        if ("admin".equalsIgnoreCase(username) || username.toLowerCase().contains("admin")) {
+            return true;
+        }
+        
+        // Check if user entity has ADMIN role (case-insensitive)
+        if (user != null && user.getRole() != null) {
+            String role = user.getRole().toUpperCase();
+            return "ADMIN".equals(role) || "ROLE_ADMIN".equals(role);
+        }
+        
+        return false;
+    }
+
     @GetMapping
     public List<Task> getAllTasks() {
         String username = getCurrentUsername();
         
-        // 1. லாகின் செய்யாத பயனர் (anonymousUser) என்றால் டேட்டா எதுவும் அனுப்பக்கூடாது
+        // 1. लॉगिन न किया गया उपयोगकर्ता (anonymousUser) को कोई डेटा नहीं भेजना चाहिए
         if ("anonymousUser".equalsIgnoreCase(username)) {
             return Collections.emptyList();
         }
         
-        // 2. Admin லாகின் செய்திருந்தால் மட்டுமே அனைத்து டாஸ்க்குகளையும் அனுப்ப வேண்டும்
-        if ("admin".equalsIgnoreCase(username) || username.toLowerCase().contains("admin")) {
+        // 2. डेटाबेस से उपयोगकर्ता इकाई प्राप्त करें
+        User user = userRepository.findByUsername(username).orElse(null);
+        
+        // 3. जांचें कि यदि उपयोगकर्ता एडमिन है तो सभी कार्य वापस करें
+        if (isAdmin(username, user)) {
             return taskRepository.findAll();
         }
         
-        // 3. Student லாகின் செய்திருந்தால், அந்த மாணவருக்குரிய டாஸ்க்குகளை மட்டுமே அனுப்ப வேண்டும்
+        // 4. छात्र/नियमित उपयोगकर्ता के लिए, केवल उनके कार्य फ़िल्टर करें
         return taskRepository.findAll().stream()
-                .filter(t -> t.getUser() != null && username.equalsIgnoreCase(t.getUser().getUsername()))
+                .filter(t -> (t.getUser() != null && username.equalsIgnoreCase(t.getUser().getUsername()))
+                        || username.equalsIgnoreCase(t.getCreatedBy())
+                        || username.equalsIgnoreCase(t.getAssignedTo())
+                        || "ALL".equalsIgnoreCase(t.getAssignedTo()))
                 .collect(Collectors.toList());
     }
 
@@ -103,21 +126,32 @@ public class TaskController {
     @PostMapping
     public Task createTask(@RequestBody Task task) {
         String username = getCurrentUsername();
-        if (!"anonymousUser".equalsIgnoreCase(username)) {
-            User user = userRepository.findByUsername(username).orElse(null);
-            task.setUser(user);
+        if ("anonymousUser".equalsIgnoreCase(username)) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "Login required to create a task");
         }
+
+        User user = userRepository.findByUsername(username).orElse(null);
+        task.setUser(user);
+        task.setCreatedBy(username);
+        task.setAssignedTo(username);
+        task.setRole("student");
         if (task.getCategory() == null || task.getCategory().isEmpty()) {
             task.setCategory("General");
         }
         if (task.getStatus() == null || task.getStatus().isEmpty()) {
-            task.setStatus("TODO");
+            task.setStatus("In Progress");
         }
         
         Task saved = taskRepository.save(task);
 
-        emailService.sendTaskNotification(username, "New Task Created: " + saved.getTitle(), 
-                "Hello " + username + ",\nYour task '" + saved.getTitle() + "' was successfully created.");
+        messagingTemplate.convertAndSend("/topic/admin-tasks", saved);
+        messagingTemplate.convertAndSend("/topic/tasks", saved);
+
+        try {
+            emailService.sendTaskNotification(username, "New Task Created: " + saved.getTitle(),
+                    "Hello " + username + ",\nYour task '" + saved.getTitle() + "' was successfully created.");
+        } catch (Exception ignored) {
+        }
 
         return saved;
     }
