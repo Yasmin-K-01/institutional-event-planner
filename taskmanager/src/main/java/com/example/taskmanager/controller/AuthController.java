@@ -1,6 +1,7 @@
 package com.example.taskmanager.controller;
 
 import com.example.taskmanager.model.User;
+import com.example.taskmanager.model.LoginRequest;
 import com.example.taskmanager.repository.UserRepository;
 import com.example.taskmanager.service.JwtUtils;
 import org.springframework.http.ResponseEntity;
@@ -40,7 +41,7 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> authenticateUser(@RequestBody User loginRequest) {
+    public ResponseEntity<?> authenticateUser(@RequestBody LoginRequest loginRequest) {
         User user = userRepository.findByUsername(loginRequest.getUsername())
                 .orElse(null);
 
