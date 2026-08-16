@@ -705,6 +705,24 @@
             localStorage.setItem('eliteschedule_user_fx', data.username || username);
         }
 
+        async function adminLoginWithBackend(usernameInput, passwordInput) {
+            const payload = {
+                username: usernameInput.value.trim(),
+                password: passwordInput.value.trim()
+            };
+
+            const data = await apiRequest('/api/auth/login', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            localStorage.setItem('token', data.token);
+            localStorage.setItem('eliteschedule_token_fx', data.token);
+            localStorage.setItem('eliteschedule_user_fx', data.username || payload.username);
+            return data;
+        }
+
         async function registerWithBackend(username, password) {
             await apiRequest('/api/auth/register', {
                 method: 'POST',
@@ -753,8 +771,10 @@
         // Admin Login Handler
         document.getElementById("adminLoginForm").addEventListener("submit", async (e) => {
             e.preventDefault();
-            const username = document.getElementById("adminUser").value.trim();
-            const password = document.getElementById("adminPass").value;
+            const usernameInput = document.getElementById("adminUser");
+            const passwordInput = document.getElementById("adminPass");
+            const username = usernameInput.value.trim();
+            const password = passwordInput.value.trim();
             const errDiv = document.getElementById("adminLoginError");
             errDiv.style.display = 'none';
             errDiv.innerText = "";
@@ -772,7 +792,7 @@
             }
 
             try {
-                await loginWithBackend(username, password);
+                await adminLoginWithBackend(usernameInput, passwordInput);
             } catch (error) {
                 errDiv.innerText = "Admin backend login failed.";
                 errDiv.style.display = 'block';
