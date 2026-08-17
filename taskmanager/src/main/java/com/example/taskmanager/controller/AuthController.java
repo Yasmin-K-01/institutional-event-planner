@@ -1,7 +1,6 @@
 package com.example.taskmanager.controller;
 
 import com.example.taskmanager.model.User;
-import com.example.taskmanager.model.LoginRequest;
 import com.example.taskmanager.repository.UserRepository;
 import com.example.taskmanager.service.JwtUtils;
 import org.springframework.http.ResponseEntity;
@@ -40,13 +39,13 @@ public class AuthController {
         return ResponseEntity.ok("User registered successfully!");
     }
 
-    @PostMapping("/login")
+    @PostMapping({"/login", "/signin"})
     public ResponseEntity<?> authenticateUser(@RequestBody Map<String, Object> payload) {
-        System.out.println("Received payload: " + payload);
+        String username = payload.get("username") != null ? payload.get("username").toString().trim() :
+                (payload.get("email") != null ? payload.get("email").toString().trim() : "");
+        String password = payload.get("password") != null ? payload.get("password").toString().trim() : "";
 
-        String username = payload.get("username") != null ? payload.get("username").toString() :
-                (payload.get("email") != null ? payload.get("email").toString() : "");
-        String password = payload.get("password") != null ? payload.get("password").toString() : "";
+        System.out.println("Admin Login attempt for user: " + username);
 
         User user = userRepository.findByUsername(username)
                 .orElse(null);

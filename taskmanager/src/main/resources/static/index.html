@@ -696,8 +696,8 @@
         async function loginWithBackend(username, password) {
             const data = await apiRequest('/api/auth/login', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ username, password })
+                headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
+                body: JSON.stringify({ username: username.trim(), password: password.trim() })
             });
 
             localStorage.setItem('token', data.token);
@@ -706,18 +706,16 @@
         }
 
         async function adminLoginWithBackend(usernameInput, passwordInput) {
-            const payload = {
-                username: usernameInput.value.trim(),
-                password: passwordInput.value.trim()
-            };
-
-            const data = await fetch('/api/auth/signin', {
+            const data = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                     'Accept': 'application/json'
                 },
-                body: JSON.stringify(payload)
+                body: JSON.stringify({
+                    username: usernameInput.value.trim(),
+                    password: passwordInput.value.trim()
+                })
             }).then(async response => {
                 const contentType = response.headers.get('content-type') || '';
                 const body = contentType.includes('application/json') ? await response.json() : await response.text();

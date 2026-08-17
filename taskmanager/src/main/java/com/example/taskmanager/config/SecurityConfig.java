@@ -36,9 +36,16 @@ public class SecurityConfig {
                 .map(appUser -> User.builder()
                         .username(appUser.getUsername())
                         .password(appUser.getPassword())
-                        .roles("USER")
+                        .roles(resolveRole(appUser.getRole()))
                         .build())
                 .orElseThrow(() -> new UsernameNotFoundException("User not found: " + username));
+    }
+
+    private String resolveRole(String role) {
+        if (role == null || role.isBlank()) {
+            return "USER";
+        }
+        return role.startsWith("ROLE_") ? role.substring("ROLE_".length()) : role;
     }
 
     @Bean
