@@ -31,6 +31,7 @@
             margin: 0;
             padding: 0;
             min-height: 100vh;
+            overflow-x: hidden;
         }
 
         body:not(.dark-glass) {
@@ -142,6 +143,15 @@
         .glass-modal-overlay { position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.6); backdrop-filter: blur(8px); display: flex; align-items: center; justify-content: center; z-index: 2000; opacity: 0; pointer-events: none; transition: opacity 0.2s ease; }
         .glass-modal-overlay.active { opacity: 1; pointer-events: auto; }
         .glass-modal-card { background: var(--bg-main); border: 1.5px solid var(--glass-border); border-radius: 20px; width: 100%; max-width: 440px; padding: 30px; box-shadow: 0 20px 40px rgba(0,0,0,0.4); }
+        .users-modal-card { width: 95%; max-width: 768px; max-height: 90vh; overflow-y: auto; box-sizing: border-box; }
+        .users-modal-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; margin-bottom: 20px; }
+        .users-modal-title { font-weight: 800; margin: 0; line-height: 1.25; }
+        .users-modal-close { background: transparent; border: none; font-size: 1.2rem; cursor: pointer; min-width: 42px; min-height: 42px; justify-content: center; padding: 8px; }
+        .users-table-scroll { max-height: 58vh; overflow: auto; -webkit-overflow-scrolling: touch; }
+        #usersTable { width: 100%; min-width: 560px; border-collapse: collapse; font-size: 0.88rem; }
+        #usersTable th, #usersTable td { white-space: nowrap; vertical-align: middle; }
+        #usersTable th:nth-child(2), #usersTable td:nth-child(2) { min-width: 220px; white-space: normal; overflow-wrap: anywhere; }
+        .remove-user-btn { min-height: 40px; padding: 9px 14px !important; }
         .alert-error { background: rgba(239, 68, 68, 0.15); border: 1px solid #ef4444; color: #ef4444; padding: 10px; border-radius: 8px; font-size: 0.85rem; margin-bottom: 15px; display: none; }
 
         @media(max-width: 900px) {
@@ -149,6 +159,18 @@
             .workspace-grid { grid-template-columns: 1fr; }
             .feature-cards-grid { grid-template-columns: 1fr; }
             .student-tasks-container { grid-template-columns: 1fr; }
+        }
+
+        @media(max-width: 640px) {
+            .glass-modal-overlay { align-items: flex-start; padding: 16px 0; overflow-y: auto; }
+            .users-modal-card { width: 95%; max-height: 90vh; padding: 18px; border-radius: 16px; }
+            .users-modal-header { flex-direction: column; align-items: stretch; gap: 12px; }
+            .users-modal-close { align-self: flex-end; }
+            .users-modal-title { font-size: 1rem; }
+            .users-table-scroll { max-height: 62vh; }
+            #usersTable { min-width: 520px; font-size: 0.8rem; }
+            #usersTable th, #usersTable td { padding: 9px 8px !important; }
+            .remove-user-btn { min-height: 44px; padding: 10px 14px !important; font-size: 0.82rem !important; }
         }
     </style>
 </head>
@@ -463,14 +485,14 @@
 
     <!-- Registered Students List Modal -->
     <div class="glass-modal-overlay" id="usersListModal">
-        <div class="glass-modal-card" style="max-width: 650px;">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h4 style="font-weight: 800; margin: 0;"><i class="fa-solid fa-users text-primary me-2"></i>Registered Students Database</h4>
-                <button type="button" class="btn" style="background: transparent; border: none; font-size: 1.2rem; cursor: pointer;" onclick="closeModal('usersListModal')">&times;</button>
+        <div class="glass-modal-card users-modal-card">
+            <div class="users-modal-header">
+                <h4 class="users-modal-title"><i class="fa-solid fa-users text-primary me-2"></i>Registered Students Database</h4>
+                <button type="button" class="btn users-modal-close" onclick="closeModal('usersListModal')">&times;</button>
             </div>
             <div id="registeredUsersCountText" style="font-size: 0.88rem; font-weight: 700; color: var(--primary-blue); margin-bottom: 15px;"></div>
-            <div style="max-height: 320px; overflow-y: auto;">
-                <table style="width: 100%; border-collapse: collapse; font-size: 0.88rem;" id="usersTable">
+            <div class="users-table-scroll">
+                <table id="usersTable">
                     <thead>
                         <tr style="border-bottom: 2px solid var(--glass-border); text-align: left;">
                             <th style="padding: 10px;">#</th>
@@ -583,9 +605,18 @@
             }
 
             try {
-                const users = await apiRequest('/api/auth/users');
+                const users = await apiRequest('/api/users');
                 registeredUsers = {};
-                users.forEach(email => registeredUsers[email] = 'Stored securely');
+                users.forEach(user => {
+                    const username = user.username || user.email;
+                    if (username) {
+                        registeredUsers[username] = {
+                            id: user.id,
+                            email: user.email || username,
+                            password: 'Stored securely'
+                        };
+                    }
+                });
                 populateAdminStudentDropdown();
             } catch (error) {
                 console.error("Error loading users:", error);
@@ -1302,15 +1333,18 @@
             }
         }
 
-        function removeRegisteredStudent(email) {
-            if (confirm(`Are you sure you want to remove student: ${email}? This will also delete all tasks associated with this student.`)) {
-                delete registeredUsers[email];
-
-                openUsersModal(); 
-                populateAdminStudentDropdown();
-                updateAllViews();
-                updateDailyGoalDisplay();
+        function updateRegisteredUsersCount() {
+            const count = document.querySelectorAll('#usersTableBody tr[data-id]').length;
+            document.getElementById('registeredUsersCountText').innerText = `Total Registered Students: ${count}`;
+            if (count === 0) {
+                document.getElementById('usersTableBody').innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 20px;">No students registered yet.</td></tr>`;
             }
+        }
+
+        function renumberRegisteredUserRows() {
+            document.querySelectorAll('#usersTableBody tr[data-id]').forEach((row, index) => {
+                row.querySelector('.student-row-index').innerText = index + 1;
+            });
         }
 
         async function openUsersModal() {
@@ -1327,13 +1361,14 @@
                 tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 20px;">No students registered yet.</td></tr>`;
             } else {
                 userEmails.forEach((email, index) => {
+                    const user = usersDB[email];
                     tbody.innerHTML += `
-                        <tr style="border-bottom: 1.5px solid var(--glass-border);">
-                            <td style="padding: 10px;">${index + 1}</td>
+                        <tr data-id="${user.id}" data-username="${email}" style="border-bottom: 1.5px solid var(--glass-border);">
+                            <td class="student-row-index" style="padding: 10px;">${index + 1}</td>
                             <td style="padding: 10px;">${email}</td>
-                            <td style="padding: 10px;">${usersDB[email]}</td>
+                            <td style="padding: 10px;">${user.password}</td>
                             <td style="padding: 10px; text-align: right;">
-                                <button onclick="removeRegisteredStudent('${email}')" class="btn" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: none; padding: 4px 10px; border-radius: 6px; cursor: pointer; font-size: 0.8rem;" title="Remove Student">
+                                <button type="button" class="btn remove-user-btn" data-id="${user.id}" style="background: rgba(239, 68, 68, 0.15); color: #ef4444; border: none; border-radius: 6px; cursor: pointer; font-size: 0.8rem;" title="Remove Student">
                                     <i class="fa-solid fa-user-xmark me-1"></i> Remove
                                 </button>
                             </td>
@@ -1343,6 +1378,35 @@
             }
             openModal('usersListModal');
         }
+
+        document.getElementById('usersTableBody').addEventListener('click', async (event) => {
+            const button = event.target.closest('.remove-user-btn');
+            if (!button) return;
+
+            if (!confirm("Are you sure you want to remove this student?")) return;
+
+            const userId = button.dataset.id;
+            const row = button.closest('tr');
+            const username = row.dataset.username;
+
+            try {
+                const response = await fetch(apiUrl('/api/users/' + userId), {
+                    method: 'DELETE',
+                    headers: authHeaders({ 'Accept': 'application/json' })
+                });
+                await parseApiResponse(response);
+
+                row.remove();
+                delete registeredUsers[username];
+                updateRegisteredUsersCount();
+                renumberRegisteredUserRows();
+                populateAdminStudentDropdown();
+                await loadTasks(true);
+                updateDailyGoalDisplay();
+            } catch (error) {
+                alert(`Could not remove student: ${error.message}`);
+            }
+        });
 
         function exportAdminReportPDF() {
             const { jsPDF } = window.jspdf;
@@ -1377,7 +1441,7 @@
                 if (y > 270) { doc.addPage(); y = 20; }
                 doc.text(`${index + 1}`, 14, y);
                 doc.text(`${email}`, 30, y);
-                doc.text(`${usersDB[email]}`, 130, y);
+                doc.text(`${usersDB[email].password}`, 130, y);
                 y += 7;
             });
 
