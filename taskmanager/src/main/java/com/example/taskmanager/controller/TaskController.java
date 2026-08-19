@@ -16,6 +16,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.multipart.MultipartFile;
 import org.springframework.web.server.ResponseStatusException;
 
 import com.itextpdf.kernel.pdf.PdfDocument;
@@ -26,11 +27,29 @@ import com.itextpdf.layout.element.Table;
 import com.itextpdf.layout.properties.UnitValue;
 
 import java.io.ByteArrayOutputStream;
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.InputStreamReader;
+import java.nio.charset.StandardCharsets;
+import java.time.LocalDate;
+import java.time.ZoneId;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
+
+import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.DataFormatter;
+import org.apache.poi.ss.usermodel.DateUtil;
+import org.apache.poi.ss.usermodel.Row;
+import org.apache.poi.ss.usermodel.Sheet;
+import org.apache.poi.ss.usermodel.Workbook;
+import org.apache.poi.ss.usermodel.WorkbookFactory;
 
 @RestController
 @RequestMapping("/api/tasks")
@@ -213,6 +232,219 @@ public class TaskController {
         messagingTemplate.convertAndSend("/topic/tasks", savedTask);
         
         return savedTask;
+    }
+
+    @PostMapping(value = "/upload-excel", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
+    public ResponseEntity<Map<String, Object>> uploadSchedule(@RequestParam("file") MultipartFile file) {
+        String username = getCurrentUsername();
+        User currentUser = userRepository.findByUsername(username).orElse(null);
+        if (!isAdmin(username, currentUser)) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "Admin login required to import schedules");
+        }
+        if (file.isEmpty() || file.getOriginalFilename() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose an .xlsx or .csv file");
+        }
+
+        String filename = file.getOriginalFilename().toLowerCase();
+        if (!filename.endsWith(".xlsx") && !filename.endsWith(".csv")) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only .xlsx and .csv files are supported");
+        }
+
+        try {
+            if (filename.endsWith(".xlsx")) {
+                return ResponseEntity.ok(importInstitutionWorkbook(file, username));
+            }
+        } catch (IOException | RuntimeException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Could not parse the schedule file", exception);
+        }
+
+        List<String[]> rows;
+        try {
+            rows = readCsv(file);
+        } catch (IOException exception) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Could not parse the schedule file", exception);
+        }
+
+        if (rows.isEmpty()) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "The schedule file has no data rows");
+        }
+
+        Map<String, Integer> columns = headerIndexes(rows.remove(0));
+        List<String> required = List.of("task name", "target hours", "due date", "assigned student username/email");
+        if (required.stream().anyMatch(column -> !columns.containsKey(column))) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST,
+                    "Required headers: Task Name, Description, Target Hours, Due Date, Assigned Student Username/Email");
+        }
+
+        int imported = 0;
+        List<String> errors = new ArrayList<>();
+        for (int rowNumber = 0; rowNumber < rows.size(); rowNumber++) {
+            String[] row = rows.get(rowNumber);
+            try {
+                String assignedValue = requiredValue(row, columns, "assigned student username/email");
+                User student = userRepository.findByUsername(assignedValue)
+                        .or(() -> userRepository.findByEmail(assignedValue)).orElse(null);
+
+                Task task = new Task();
+                task.setTitle(requiredValue(row, columns, "task name"));
+                task.setDescription(value(row, columns, "description"));
+                task.setHours(Double.parseDouble(requiredValue(row, columns, "target hours")));
+                task.setDueDate(parseDate(requiredValue(row, columns, "due date")));
+                task.setAssignedTo(student == null ? assignedValue : student.getUsername());
+                task.setUser(student);
+                task.setCategory("Calendar");
+                task.setPriority(Task.Priority.MEDIUM);
+                task.setStatus("In Progress");
+                task.setRole("admin");
+                task.setCreatedBy(username);
+
+                Task saved = taskRepository.save(task);
+                messagingTemplate.convertAndSend("/topic/tasks", saved);
+                messagingTemplate.convertAndSend("/topic/calendar-tasks", saved);
+                imported++;
+            } catch (RuntimeException exception) {
+                errors.add("Row " + (rowNumber + 2) + ": " + exception.getMessage());
+            }
+        }
+
+        Map<String, Object> response = new HashMap<>();
+        response.put("imported", imported);
+        response.put("errors", errors);
+        return ResponseEntity.ok(response);
+    }
+
+    private List<String[]> readCsv(MultipartFile file) throws IOException {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
+            return reader.lines().filter(line -> !line.isBlank()).map(this::parseCsvLine).toList();
+        }
+    }
+
+    private String[] parseCsvLine(String line) {
+        List<String> values = new ArrayList<>();
+        StringBuilder value = new StringBuilder();
+        boolean quoted = false;
+        for (int index = 0; index < line.length(); index++) {
+            char character = line.charAt(index);
+            if (character == '"') {
+                quoted = !quoted;
+            } else if (character == ',' && !quoted) {
+                values.add(value.toString().trim());
+                value.setLength(0);
+            } else {
+                value.append(character);
+            }
+        }
+        values.add(value.toString().trim());
+        return values.toArray(String[]::new);
+    }
+
+    private Map<String, Object> importInstitutionWorkbook(MultipartFile file, String username) throws IOException {
+        int imported = 0;
+        List<String> errors = new ArrayList<>();
+        DataFormatter formatter = new DataFormatter();
+        try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
+            Sheet sheet = workbook.getSheetAt(0);
+            for (int rowIndex = 5; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
+                Row row = sheet.getRow(rowIndex);
+                if (row == null) {
+                    continue;
+                }
+                String dateValue = cellValue(row.getCell(2), formatter);
+                if (dateValue.isBlank()) {
+                    continue;
+                }
+                try {
+                    Task task = new Task();
+                    task.setDueDate(parseDate(dateValue));
+                    task.setTitle(requiredCellValue(row.getCell(3), formatter, "title of the event"));
+                    task.setCategory(cellValue(row.getCell(4), formatter));
+                    task.setFacultyCoordinator(cellValue(row.getCell(5), formatter));
+                    task.setDescription(task.getFacultyCoordinator().isBlank()
+                            ? "Institution calendar event"
+                            : "Faculty coordinator: " + task.getFacultyCoordinator());
+                    task.setHours(0D);
+                    task.setAssignedTo("ALL");
+                    task.setPriority(Task.Priority.MEDIUM);
+                    task.setStatus("In Progress");
+                    task.setRole("admin");
+                    task.setCreatedBy(username);
+
+                    Task saved = taskRepository.save(task);
+                    messagingTemplate.convertAndSend("/topic/tasks", saved);
+                    messagingTemplate.convertAndSend("/topic/calendar-tasks", saved);
+                    imported++;
+                } catch (RuntimeException exception) {
+                    errors.add("Row " + (rowIndex + 1) + ": " + exception.getMessage());
+                }
+            }
+        }
+        if (imported == 0 && errors.isEmpty()) {
+            throw new IllegalArgumentException("The workbook has no dated events from row 6 onward");
+        }
+        Map<String, Object> response = new HashMap<>();
+        response.put("imported", imported);
+        response.put("errors", errors);
+        return response;
+    }
+
+    private String cellValue(Cell cell, DataFormatter formatter) {
+        if (cell == null) {
+            return "";
+        }
+        if (DateUtil.isCellDateFormatted(cell)) {
+            Date date = cell.getDateCellValue();
+            return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().format(DateTimeFormatter.ofPattern("d/M/yyyy"));
+        }
+        return formatter.formatCellValue(cell).trim();
+    }
+
+    private String requiredCellValue(Cell cell, DataFormatter formatter, String column) {
+        String value = cellValue(cell, formatter);
+        if (value.isBlank()) {
+            throw new IllegalArgumentException(column + " is required");
+        }
+        return value;
+    }
+
+    private Map<String, Integer> headerIndexes(String[] headers) {
+        Map<String, Integer> indexes = new HashMap<>();
+        for (int index = 0; index < headers.length; index++) {
+            indexes.put(headers[index].trim().toLowerCase(), index);
+        }
+        return indexes;
+    }
+
+    private String value(String[] row, Map<String, Integer> columns, String column) {
+        Integer index = columns.get(column);
+        return index == null || index >= row.length ? "" : row[index].trim();
+    }
+
+    private String requiredValue(String[] row, Map<String, Integer> columns, String column) {
+        String value = value(row, columns, column);
+        if (value.isBlank()) {
+            throw new IllegalArgumentException(column + " is required");
+        }
+        return value;
+    }
+
+    private LocalDate parseDate(String value) {
+        try {
+            double excelSerial = Double.parseDouble(value);
+            if (DateUtil.isValidExcelDate(excelSerial)) {
+                Date date = DateUtil.getJavaDate(excelSerial);
+                return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+            }
+        } catch (NumberFormatException ignored) {
+        }
+        for (DateTimeFormatter formatter : List.of(DateTimeFormatter.ISO_LOCAL_DATE,
+            DateTimeFormatter.ofPattern("d/M/yyyy"), DateTimeFormatter.ofPattern("dd/MM/yyyy"),
+            DateTimeFormatter.ofPattern("M/d/yyyy"))) {
+            try {
+                return LocalDate.parse(value, formatter);
+            } catch (DateTimeParseException ignored) {
+            }
+        }
+        throw new IllegalArgumentException("due date must use yyyy-MM-dd or M/d/yyyy");
     }
 
     @PatchMapping("/{id}/status")

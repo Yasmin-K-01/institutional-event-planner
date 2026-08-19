@@ -30,6 +30,7 @@ public class Task {
     private String role;
     private String createdBy;
     private String assignedTo;
+    private String facultyCoordinator;
 
     @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "user_id")
@@ -86,6 +87,9 @@ public class Task {
 
     public String getAssignedTo() { return assignedTo; }
     public void setAssignedTo(String assignedTo) { this.assignedTo = assignedTo; }
+
+    public String getFacultyCoordinator() { return facultyCoordinator; }
+    public void setFacultyCoordinator(String facultyCoordinator) { this.facultyCoordinator = facultyCoordinator; }
 
     public User getUser() { return user; }
     public void setUser(User user) { this.user = user; }

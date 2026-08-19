@@ -11,6 +11,9 @@
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <!-- FullCalendar -->
+    <link href="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.css" rel="stylesheet">
+    <script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.15/index.global.min.js"></script>
     <!-- jsPDF for Admin Export PDF -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
@@ -113,6 +116,13 @@
         .workspace-grid { display: grid; grid-template-columns: 1fr 1.2fr; gap: 24px; margin-bottom: 24px; }
         
         .chart-container { position: relative; height: 210px; width: 100%; }
+
+        #fullCalendar { --fc-border-color: var(--glass-border); --fc-page-bg-color: transparent; --fc-neutral-bg-color: rgba(255,255,255,0.03); --fc-list-event-hover-bg-color: rgba(0,102,255,0.16); --fc-today-bg-color: rgba(0,102,255,0.12); }
+        #fullCalendar .fc-toolbar-title { font-size: 1.1rem; }
+        #fullCalendar .fc-button { background: rgba(0,102,255,0.18); border: 1px solid rgba(0,102,255,0.5); color: var(--text-main); text-transform: capitalize; }
+        #fullCalendar .fc-button:hover, #fullCalendar .fc-button-active { background: var(--primary-blue); }
+        #fullCalendar .fc-event { border: 0; border-left: 3px solid #38bdf8; padding: 2px 4px; cursor: pointer; }
+        #fullCalendar .fc-event.fc-event-completed { background: rgba(16,185,129,0.8); border-left-color: #10b981; }
 
         /* Calendar */
         .calendar-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 8px; }
@@ -256,6 +266,9 @@
                     <button class="btn btn-primary" style="background: #8b5cf6 !important; padding: 10px 16px; font-size: 0.85rem;" onclick="openUsersModal()">
                         <i class="fa-solid fa-users me-1"></i> Registered Students
                     </button>
+                    <button class="btn btn-primary" style="background: #0ea5e9 !important; padding: 10px 16px; font-size: 0.85rem;" onclick="openModal('importScheduleModal')">
+                        <i class="fa-solid fa-file-import me-1"></i> Import Excel Schedule
+                    </button>
                     <button class="btn btn-primary" style="background: #ef4444 !important; padding: 10px 16px; font-size: 0.85rem;" onclick="exportAdminReportPDF()">
                         <i class="fa-solid fa-file-pdf me-1"></i> Export PDF Report
                     </button>
@@ -388,25 +401,16 @@
 
         <!-- Calendar Section -->
         <div class="glass-panel">
-            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px;">
-                <h3 style="font-weight: 800; margin: 0;" id="monthYearTitle">August 2026</h3>
-                <div>
-                    <button class="btn btn-outline-primary" style="padding: 6px 14px; font-size: 0.85rem;" onclick="prevMonth()">&lt; Prev</button>
-                    <button class="btn btn-outline-primary" style="padding: 6px 14px; font-size: 0.85rem;" onclick="nextMonth()">Next &gt;</button>
-                </div>
+            <div style="display: flex; justify-content: flex-end; margin-bottom: 14px;">
+                <label id="calendarRangeLabel" style="font-size: 0.78rem; color: var(--text-muted); display: flex; align-items: center; gap: 8px;">
+                    Calendar range
+                    <select id="calendarRangeFilter" class="form-select" style="width: auto; margin: 0; padding: 7px 10px;" onchange="renderCalendar()">
+                        <option value="all">All events</option>
+                        <option value="next2">Next 2 months</option>
+                    </select>
+                </label>
             </div>
-
-            <div class="calendar-grid" style="margin-bottom: 12px;">
-                <div class="calendar-day-header">Sun</div>
-                <div class="calendar-day-header">Mon</div>
-                <div class="calendar-day-header">Tue</div>
-                <div class="calendar-day-header">Wed</div>
-                <div class="calendar-day-header">Thu</div>
-                <div class="calendar-day-header">Fri</div>
-                <div class="calendar-day-header">Sat</div>
-            </div>
-
-            <div class="calendar-grid" id="calendarDaysGrid"></div>
+            <div id="fullCalendar"></div>
         </div>
 
         <!-- Schedule / Student Grouped Cards Section -->
@@ -507,10 +511,29 @@
         </div>
     </div>
 
+    <!-- Admin Schedule Import Modal -->
+    <div class="glass-modal-overlay" id="importScheduleModal">
+        <div class="glass-modal-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px;">
+                <h4 style="font-weight: 800; margin: 0; color: #0ea5e9;"><i class="fa-solid fa-file-import me-2"></i>Import Excel Schedule</h4>
+                <button type="button" class="btn" style="background: transparent; border: none; font-size: 1.2rem; cursor: pointer;" onclick="closeModal('importScheduleModal')">&times;</button>
+            </div>
+            <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5;">Upload an Excel or CSV schedule with task name, description, target hours, due date, and assigned student username or email.</p>
+            <a href="data:text/csv;charset=utf-8,Task%20Name%2CDescription%2CTarget%20Hours%2CDue%20Date%2CAssigned%20Student%20Username%2FEmail%0AReading%20Assignment%2CChapter%201%20notes%2C2.5%2C2026-08-25%2Cstudent%40example.com" download="eliteschedule-template.csv" style="display: inline-block; color: #38bdf8; font-size: 0.85rem; font-weight: 700; margin-bottom: 16px;">Download CSV template</a>
+            <div id="importScheduleError" class="alert-error"></div>
+            <form id="importScheduleForm">
+                <label style="font-size: 0.75rem; font-weight: 700;">Schedule file (.xlsx or .csv)</label>
+                <input type="file" id="scheduleFile" class="form-control" accept=".xlsx,.csv" required>
+                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; background: #0ea5e9 !important;">Import Tasks</button>
+            </form>
+        </div>
+    </div>
+
     <script>
         const API_BASE = (window.ELITESCHEDULE_API_BASE || '').replace(/\/$/, '');
         let schedules = [];
         let registeredUsers = {};
+        let fullCalendar = null;
 
         function apiUrl(path) {
             return `${API_BASE}${path}`;
@@ -544,6 +567,7 @@
                 id: task.id,
                 title: task.title || '',
                 description: task.description || '',
+                facultyCoordinator: task.facultyCoordinator || '',
                 dueDate: task.dueDate || '',
                 startTime: task.startTime || '',
                 endTime: task.endTime || '',
@@ -651,6 +675,7 @@
 
             checkAuthStatus();
             initCharts();
+            initFullCalendar();
             await refreshServerData(true);
             updateAllViews();
             updateDailyGoalDisplay();
@@ -681,6 +706,34 @@
         function closeModal(id) { document.getElementById(id).classList.remove('active'); }
         function switchModal(closeId, openId) { closeModal(closeId); openModal(openId); }
 
+        function initFullCalendar() {
+            const calendarEl = document.getElementById('fullCalendar');
+            fullCalendar = new FullCalendar.Calendar(calendarEl, {
+                initialView: 'dayGridMonth',
+                initialDate: currentDate,
+                height: 'auto',
+                dayMaxEvents: 3,
+                headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,listMonth' },
+                datesSet: info => {
+                    currentDate = info.view.currentStart;
+                    renderCalendar();
+                },
+                eventDidMount: info => {
+                    info.el.title = info.event.extendedProps.facultyCoordinator
+                        ? `${info.event.title}\nFaculty coordinator: ${info.event.extendedProps.facultyCoordinator}`
+                        : info.event.title;
+                },
+                eventClick: info => {
+                    const task = schedules.find(item => String(item.id) === String(info.event.id));
+                    if (task) {
+                        info.jsEvent.preventDefault();
+                        alert(`${task.title}\n${task.description || 'No description'}\nFaculty coordinator: ${task.facultyCoordinator || 'Not specified'}\nStatus: ${task.status}`);
+                    }
+                }
+            });
+            fullCalendar.render();
+        }
+
         function populateAdminStudentDropdown() {
             const selectEl = document.getElementById('assignStudentTarget');
             selectEl.innerHTML = `<option value="ALL">Broadcast to All Students</option>`;
@@ -707,6 +760,7 @@
                     document.getElementById('dailyGoalStatusBanner').style.display = 'none';
                     document.getElementById('goalMetricCard').style.display = 'none';
                     document.getElementById('scheduleListTitle').innerText = "Student Submissions & Task Progress (Grouped View)";
+                    document.getElementById('calendarRangeLabel').style.display = 'flex';
                     populateAdminStudentDropdown();
                 } else {
                     document.getElementById('adminBanner').style.display = 'none';
@@ -716,11 +770,13 @@
                     document.getElementById('dailyGoalStatusBanner').style.display = 'flex';
                     document.getElementById('goalMetricCard').style.display = 'flex';
                     document.getElementById('scheduleListTitle').innerText = "Your Logged Schedules & Assigned Tasks";
+                    document.getElementById('calendarRangeLabel').style.display = 'none';
                 }
             } else {
                 document.getElementById('authNavButtons').style.display = 'flex';
                 document.getElementById('userProfileNav').style.display = 'none';
                 document.getElementById('adminBanner').style.display = 'none';
+                document.getElementById('calendarRangeLabel').style.display = 'none';
             }
         }
 
@@ -1034,6 +1090,27 @@
             }
         });
 
+        document.getElementById('importScheduleForm').addEventListener('submit', async (event) => {
+            event.preventDefault();
+            const errorBox = document.getElementById('importScheduleError');
+            errorBox.style.display = 'none';
+            const fileInput = document.getElementById('scheduleFile');
+            const formData = new FormData();
+            formData.append('file', fileInput.files[0]);
+
+            try {
+                const result = await apiRequest('/api/tasks/upload-excel', { method: 'POST', body: formData });
+                await loadTasks(true);
+                closeModal('importScheduleModal');
+                fileInput.value = '';
+                const failures = result.errors && result.errors.length ? ` ${result.errors.length} row(s) were skipped.` : '';
+                alert(`${result.imported} task(s) imported.${failures}`);
+            } catch (error) {
+                errorBox.innerText = `Import failed: ${error.message}`;
+                errorBox.style.display = 'block';
+            }
+        });
+
         function updateAllViews() {
             renderMetrics();
             renderCharts();
@@ -1107,44 +1184,30 @@
         }
 
         function renderCalendar() {
-            const year = currentDate.getFullYear();
-            const month = currentDate.getMonth();
-            const monthNames = ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"];
-            document.getElementById("monthYearTitle").innerText = `${monthNames[month]} ${year}`;
-
-            const firstDay = new Date(year, month, 1).getDay();
-            const daysInMonth = new Date(year, month + 1, 0).getDate();
-            const grid = document.getElementById("calendarDaysGrid");
-            grid.innerHTML = "";
-
-            for (let i = 0; i < firstDay; i++) {
-                grid.innerHTML += `<div class="calendar-cell empty"></div>`;
+            if (!fullCalendar) return;
+            let data = getFilteredSchedules();
+            const rangeFilter = document.getElementById('calendarRangeFilter')?.value;
+            if (rangeFilter === 'next2' && localStorage.getItem('eliteschedule_role_fx') === 'admin') {
+                const rangeStart = new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1);
+                const rangeEnd = new Date(currentDate.getFullYear(), currentDate.getMonth() + 3, 1);
+                data = data.filter(task => {
+                    const dueDate = new Date(`${task.dueDate}T00:00:00`);
+                    return dueDate >= rangeStart && dueDate < rangeEnd;
+                });
             }
-
-            const data = getFilteredSchedules();
-            const todayStr = "2026-08-15";
-            for (let day = 1; day <= daysInMonth; day++) {
-                const dayString = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
-                const dayTasks = data.filter(s => s.dueDate === dayString);
-                let isTodayClass = (dayString === todayStr) ? 'today' : '';
-                let badgesHtml = dayTasks.map(t => `
-                    <div class="cal-task-badge" title="${t.title}">
-                        <div>🚀 ${t.title}</div>
-                        <span class="cal-task-time"><i class="fa-regular fa-clock me-1"></i>${t.startTime}-${t.endTime} (${(t.hours || 1).toFixed(1)}h)</span>
-                    </div>
-                `).join('');
-
-                grid.innerHTML += `
-                    <div class="calendar-cell ${isTodayClass}">
-                        <div class="day-number">${day}</div>
-                        ${badgesHtml}
-                    </div>
-                `;
-            }
+            fullCalendar.removeAllEvents();
+            fullCalendar.addEventSource(data.filter(task => task.dueDate).map(task => ({
+                id: String(task.id),
+                title: `${task.title} (${task.status})`,
+                start: task.dueDate,
+                allDay: true,
+                extendedProps: { facultyCoordinator: task.facultyCoordinator },
+                classNames: task.status === 'Completed' ? ['fc-event-completed'] : []
+            })));
         }
 
-        function prevMonth() { currentDate.setMonth(currentDate.getMonth() - 1); renderCalendar(); }
-        function nextMonth() { currentDate.setMonth(currentDate.getMonth() + 1); renderCalendar(); }
+        function prevMonth() { fullCalendar?.prev(); }
+        function nextMonth() { fullCalendar?.next(); }
 
         function renderScheduleCards() {
             const container = document.getElementById("scheduleCardsContainer");
