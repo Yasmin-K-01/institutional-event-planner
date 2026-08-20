@@ -18,6 +18,7 @@ public class TaskmanagerApplication {
 
     public static void main(String[] args) {
         configureDatabaseProperties();
+        configureOAuthProperties();
         SpringApplication.run(TaskmanagerApplication.class, args);
     }
 
@@ -68,6 +69,24 @@ public class TaskmanagerApplication {
             System.setProperty("spring.datasource.driver-class-name", "org.postgresql.Driver");
         } catch (Exception ignored) {
             // If parsing fails, let Spring fall back to environment variables or fail cleanly.
+        }
+    }
+
+    private static void configureOAuthProperties() {
+        String googleClientId = System.getenv("GOOGLE_CLIENT_ID");
+        String googleClientSecret = System.getenv("GOOGLE_CLIENT_SECRET");
+        if (googleClientId == null || googleClientId.isBlank()
+                || googleClientSecret == null || googleClientSecret.isBlank()) {
+            return;
+        }
+
+        System.setProperty("spring.security.oauth2.client.registration.google.client-id", googleClientId);
+        System.setProperty("spring.security.oauth2.client.registration.google.client-secret", googleClientSecret);
+        System.setProperty("spring.security.oauth2.client.registration.google.scope", "openid,profile,email");
+
+        String redirectUri = System.getenv("GOOGLE_REDIRECT_URI");
+        if (redirectUri != null && !redirectUri.isBlank()) {
+            System.setProperty("spring.security.oauth2.client.registration.google.redirect-uri", redirectUri);
         }
     }
 }

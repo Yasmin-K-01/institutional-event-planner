@@ -22,6 +22,11 @@ public class User {
     @Column(name = "role")
     private String role;
 
+    private String displayName;
+
+    @Column(unique = true)
+    private String googleId;
+
     public User() {}
 
     public User(String username, String password) {
@@ -43,4 +48,10 @@ public class User {
 
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
+
+    public String getDisplayName() { return displayName; }
+    public void setDisplayName(String displayName) { this.displayName = displayName; }
+
+    public String getGoogleId() { return googleId; }
+    public void setGoogleId(String googleId) { this.googleId = googleId; }
 }

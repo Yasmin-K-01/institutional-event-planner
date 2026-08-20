@@ -8,7 +8,6 @@ import com.example.taskmanager.repository.UserRepository;
 import com.example.taskmanager.service.AIService;
 import com.example.taskmanager.service.EmailService;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
@@ -60,15 +59,15 @@ public class TaskController {
     private final UserRepository userRepository;
     private final AIService aiService;
     private final EmailService emailService;
+    private final SimpMessagingTemplate messagingTemplate;
 
-    @Autowired
-    private SimpMessagingTemplate messagingTemplate;
-
-    public TaskController(TaskRepository taskRepository, UserRepository userRepository, AIService aiService, EmailService emailService) {
+    public TaskController(TaskRepository taskRepository, UserRepository userRepository, AIService aiService,
+                          EmailService emailService, SimpMessagingTemplate messagingTemplate) {
         this.taskRepository = taskRepository;
         this.userRepository = userRepository;
         this.aiService = aiService;
         this.emailService = emailService;
+        this.messagingTemplate = messagingTemplate;
     }
 
     private String getCurrentUsername() {

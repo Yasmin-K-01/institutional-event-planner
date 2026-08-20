@@ -435,10 +435,16 @@
                 <input type="email" id="studentLoginEmail" class="form-control" placeholder="Enter official email" required>
                 <label style="font-size: 0.75rem; font-weight: 700;">Password (Fixed Size 8)</label>
                 <input type="password" id="studentLoginPass" class="form-control" minlength="8" maxlength="8" placeholder="8-character password" required>
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--text-muted); margin: 2px 0 12px;">
+                    <input type="checkbox" id="studentRememberMe"> Remember me for 7 days
+                </label>
                 <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; margin-top: 10px; padding: 12px;">Sign In as Student</button>
             </form>
+            <button type="button" class="btn btn-outline-primary" style="width: 100%; justify-content: center; margin-top: 10px;" onclick="loginWithGoogle()"><i class="fa-brands fa-google"></i> Continue with Google</button>
             <div style="text-align: center; margin-top: 18px; font-size: 0.85rem; color: var(--text-muted);">
-                Don't have an account? <a href="#" onclick="switchModal('studentLoginModal', 'registerModal')" style="color: var(--primary-blue); font-weight: 700; text-decoration: none;">Register here</a>
+                <a href="#" onclick="openModal('forgotPasswordModal'); return false;" style="color: var(--primary-blue); font-weight: 700; text-decoration: none;">Forgot password?</a>
+                <span style="margin: 0 6px;">|</span>
+                Don't have an account? <a href="#" onclick="switchModal('studentLoginModal', 'registerModal'); return false;" style="color: var(--primary-blue); font-weight: 700; text-decoration: none;">Register here</a>
             </div>
         </div>
     </div>
@@ -479,6 +485,9 @@
                 <input type="text" id="adminUser" class="form-control" placeholder="Enter username" required>
                 <label style="font-size: 0.75rem; font-weight: 700;">Admin Password</label>
                 <input type="password" id="adminPass" class="form-control" placeholder="Enter admin password" required>
+                <label style="display: flex; align-items: center; gap: 8px; font-size: 0.8rem; color: var(--text-muted); margin: 2px 0 12px;">
+                    <input type="checkbox" id="adminRememberMe"> Remember me for 7 days
+                </label>
                 <button type="submit" class="btn btn-primary" style="width: 100%; background: #8b5cf6 !important; justify-content: center; margin-top: 10px; padding: 12px;">Secure Admin Sign In</button>
             </form>
             <div style="margin-top: 16px; padding: 10px; background: rgba(139, 92, 246, 0.1); border-radius: 10px; font-size: 0.78rem; color: var(--text-muted); text-align: center;">
@@ -518,13 +527,35 @@
                 <h4 style="font-weight: 800; margin: 0; color: #0ea5e9;"><i class="fa-solid fa-file-import me-2"></i>Import Excel Schedule</h4>
                 <button type="button" class="btn" style="background: transparent; border: none; font-size: 1.2rem; cursor: pointer;" onclick="closeModal('importScheduleModal')">&times;</button>
             </div>
-            <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5;">Upload an Excel or CSV schedule with task name, description, target hours, due date, and assigned student username or email.</p>
-            <a href="data:text/csv;charset=utf-8,Task%20Name%2CDescription%2CTarget%20Hours%2CDue%20Date%2CAssigned%20Student%20Username%2FEmail%0AReading%20Assignment%2CChapter%201%20notes%2C2.5%2C2026-08-25%2Cstudent%40example.com" download="eliteschedule-template.csv" style="display: inline-block; color: #38bdf8; font-size: 0.85rem; font-weight: 700; margin-bottom: 16px;">Download CSV template</a>
+            <p style="font-size: 0.85rem; color: var(--text-muted); line-height: 1.5;">Upload the institution workbook. Headers are on row 5; event data starts on row 6 with Date in column C, title in D, activity type in E, and faculty coordinator in F.</p>
             <div id="importScheduleError" class="alert-error"></div>
             <form id="importScheduleForm">
-                <label style="font-size: 0.75rem; font-weight: 700;">Schedule file (.xlsx or .csv)</label>
-                <input type="file" id="scheduleFile" class="form-control" accept=".xlsx,.csv" required>
-                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; background: #0ea5e9 !important;">Import Tasks</button>
+                <label style="font-size: 0.75rem; font-weight: 700;">Institution calendar (.xlsx)</label>
+                <input type="file" id="scheduleFile" class="form-control" accept=".xlsx" required>
+                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; background: #0ea5e9 !important;">Import Calendar Events</button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Forgot Password Modal -->
+    <div class="glass-modal-overlay" id="forgotPasswordModal">
+        <div class="glass-modal-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 22px;">
+                <h4 style="font-weight: 800; margin: 0; color: var(--primary-blue);"><i class="fa-solid fa-key me-2"></i>Reset Password</h4>
+                <button type="button" class="btn" style="background: transparent; border: none; font-size: 1.2rem; cursor: pointer;" onclick="closeModal('forgotPasswordModal')">&times;</button>
+            </div>
+            <div id="forgotPasswordMessage" class="alert-error"></div>
+            <form id="forgotPasswordForm">
+                <label style="font-size: 0.75rem; font-weight: 700;">Account email</label>
+                <input type="email" id="forgotEmail" class="form-control" required>
+                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Send OTP</button>
+            </form>
+            <form id="resetPasswordForm" style="display: none; margin-top: 16px;">
+                <label style="font-size: 0.75rem; font-weight: 700;">6-digit OTP</label>
+                <input type="text" id="resetOtp" class="form-control" inputmode="numeric" pattern="[0-9]{6}" maxlength="6" required>
+                <label style="font-size: 0.75rem; font-weight: 700;">New password</label>
+                <input type="password" id="resetNewPassword" class="form-control" minlength="8" required>
+                <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center;">Reset Password</button>
             </form>
         </div>
     </div>
@@ -609,8 +640,24 @@
             }
 
             try {
-                const data = await apiRequest(`/api/tasks?_=${Date.now()}`);
-                schedules = Array.isArray(data) ? data.map(toUiTask) : [];
+                const [taskData, eventData] = await Promise.all([
+                    apiRequest(`/api/tasks?_=${Date.now()}`),
+                    apiRequest(`/api/events?_=${Date.now()}`)
+                ]);
+                const tasks = Array.isArray(taskData) ? taskData.map(toUiTask) : [];
+                const events = Array.isArray(eventData) ? eventData.map(event => toUiTask({
+                    id: `event-${event.id}`,
+                    title: event.title,
+                    description: event.facultyCoordinator ? `Faculty coordinator: ${event.facultyCoordinator}` : event.category,
+                    facultyCoordinator: event.facultyCoordinator,
+                    dueDate: event.eventDate,
+                    category: event.category || 'Institution Calendar',
+                    status: 'In Progress',
+                    assignedTo: 'ALL',
+                    createdBy: 'Admin',
+                    role: 'admin'
+                })) : [];
+                schedules = [...tasks, ...events];
                 updateAllViews();
             } catch (error) {
                 if (showError) {
@@ -666,6 +713,7 @@
         let weeklyChartInstance = null;
 
         document.addEventListener("DOMContentLoaded", async () => {
+            consumeOAuthRedirect();
             document.getElementById('taskDate').value = "2026-08-15";
             document.getElementById('startTime').value = "";
             document.getElementById('endTime').value = "";
@@ -780,11 +828,11 @@
             }
         }
 
-        async function loginWithBackend(username, password) {
+        async function loginWithBackend(username, password, rememberMe = false) {
             const data = await apiRequest('/api/auth/login', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json', 'Accept': 'application/json' },
-                body: JSON.stringify({ username: username.trim(), password: password.trim() })
+                body: JSON.stringify({ username: username.trim(), password: password.trim(), rememberMe })
             });
 
             localStorage.setItem('token', data.token);
@@ -792,7 +840,7 @@
             localStorage.setItem('eliteschedule_user_fx', data.username || username);
         }
 
-        async function adminLoginWithBackend(usernameInput, passwordInput) {
+        async function adminLoginWithBackend(usernameInput, passwordInput, rememberMe = false) {
             const data = await fetch('/api/auth/login', {
                 method: 'POST',
                 headers: {
@@ -801,7 +849,8 @@
                 },
                 body: JSON.stringify({
                     username: usernameInput.value.trim(),
-                    password: passwordInput.value.trim()
+                    password: passwordInput.value.trim(),
+                    rememberMe
                 })
             }).then(async response => {
                 const contentType = response.headers.get('content-type') || '';
@@ -814,8 +863,25 @@
 
             localStorage.setItem('token', data.token);
             localStorage.setItem('eliteschedule_token_fx', data.token);
-            localStorage.setItem('eliteschedule_user_fx', data.username || payload.username);
+            localStorage.setItem('eliteschedule_user_fx', data.username || usernameInput.value.trim());
             return data;
+        }
+
+        function loginWithGoogle() {
+            window.location.href = apiUrl('/oauth2/authorization/google');
+        }
+
+        function consumeOAuthRedirect() {
+            if (!window.location.hash.includes('oauth_token=')) return;
+            const values = new URLSearchParams(window.location.hash.substring(1));
+            const token = values.get('oauth_token');
+            if (token) {
+                localStorage.setItem('token', token);
+                localStorage.setItem('eliteschedule_token_fx', token);
+                localStorage.setItem('eliteschedule_user_fx', values.get('username') || '');
+                localStorage.setItem('eliteschedule_role_fx', (values.get('role') || 'USER').toLowerCase());
+                history.replaceState(null, '', window.location.pathname);
+            }
         }
 
         async function registerWithBackend(username, password) {
@@ -831,6 +897,7 @@
             e.preventDefault();
             const username = document.getElementById("studentLoginEmail").value.trim().toLowerCase();
             const password = document.getElementById("studentLoginPass").value;
+            const rememberMe = document.getElementById("studentRememberMe").checked;
             const errDiv = document.getElementById("studentLoginError");
             errDiv.style.display = 'none';
             errDiv.innerText = "";
@@ -844,10 +911,10 @@
 
             try {
                 try {
-                    await loginWithBackend(username, password);
+                    await loginWithBackend(username, password, rememberMe);
                 } catch (loginError) {
                     await registerWithBackend(username, password);
-                    await loginWithBackend(username, password);
+                    await loginWithBackend(username, password, rememberMe);
                 }
             } catch (error) {
                 errDiv.innerText = "Incorrect password or backend login failed.";
@@ -887,7 +954,7 @@
             }
 
             try {
-                await adminLoginWithBackend(usernameInput, passwordInput);
+                await adminLoginWithBackend(usernameInput, passwordInput, document.getElementById('adminRememberMe').checked);
             } catch (error) {
                 errDiv.innerText = "Admin backend login failed.";
                 errDiv.style.display = 'block';
@@ -1099,15 +1166,62 @@
             formData.append('file', fileInput.files[0]);
 
             try {
-                const result = await apiRequest('/api/tasks/upload-excel', { method: 'POST', body: formData });
+                const result = await apiRequest('/api/events/upload', { method: 'POST', body: formData });
                 await loadTasks(true);
                 closeModal('importScheduleModal');
                 fileInput.value = '';
                 const failures = result.errors && result.errors.length ? ` ${result.errors.length} row(s) were skipped.` : '';
-                alert(`${result.imported} task(s) imported.${failures}`);
+                alert(`${result.imported} calendar event(s) imported.${failures}`);
             } catch (error) {
                 errorBox.innerText = `Import failed: ${error.message}`;
                 errorBox.style.display = 'block';
+            }
+        });
+
+        document.getElementById('forgotPasswordForm').addEventListener('submit', async event => {
+            event.preventDefault();
+            const message = document.getElementById('forgotPasswordMessage');
+            message.style.display = 'none';
+            try {
+                await apiRequest('/api/auth/forgot-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ email: document.getElementById('forgotEmail').value.trim() })
+                });
+                message.className = '';
+                message.style.display = 'block';
+                message.style.color = '#10b981';
+                message.innerText = 'If the email is registered, an OTP has been sent.';
+                document.getElementById('resetPasswordForm').style.display = 'block';
+            } catch (error) {
+                message.className = 'alert-error';
+                message.innerText = error.message;
+                message.style.display = 'block';
+            }
+        });
+
+        document.getElementById('resetPasswordForm').addEventListener('submit', async event => {
+            event.preventDefault();
+            const message = document.getElementById('forgotPasswordMessage');
+            try {
+                await apiRequest('/api/auth/reset-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        email: document.getElementById('forgotEmail').value.trim(),
+                        otp: document.getElementById('resetOtp').value.trim(),
+                        newPassword: document.getElementById('resetNewPassword').value
+                    })
+                });
+                message.className = '';
+                message.style.display = 'block';
+                message.style.color = '#10b981';
+                message.innerText = 'Password reset successfully. You can sign in now.';
+                document.getElementById('resetPasswordForm').reset();
+            } catch (error) {
+                message.className = 'alert-error';
+                message.innerText = error.message;
+                message.style.display = 'block';
             }
         });
 
