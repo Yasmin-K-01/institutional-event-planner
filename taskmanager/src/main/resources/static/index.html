@@ -183,6 +183,7 @@
             .remove-user-btn { min-height: 44px; padding: 10px 14px !important; font-size: 0.82rem !important; }
         }
     </style>
+    <link href="/admin-style.css" rel="stylesheet">
 </head>
 <body class="dark-glass">
 
@@ -531,7 +532,9 @@
             <div id="importScheduleError" class="alert-error"></div>
             <form id="importScheduleForm">
                 <label style="font-size: 0.75rem; font-weight: 700;">Institution calendar (.xlsx)</label>
-                <input type="file" id="scheduleFile" class="form-control" accept=".xlsx" required>
+                <div class="file-input-container">
+                    <input type="file" id="scheduleFile" class="form-control" accept=".xls,.xlsx" required>
+                </div>
                 <button type="submit" class="btn btn-primary" style="width: 100%; justify-content: center; background: #0ea5e9 !important;">Import Calendar Events</button>
             </form>
         </div>
@@ -621,7 +624,7 @@
             const contentType = response.headers.get('content-type') || '';
             const body = contentType.includes('application/json') ? await response.json() : await response.text();
             if (!response.ok) {
-                throw new Error(typeof body === 'string' ? body : (body.message || 'Request failed'));
+                throw new Error(typeof body === 'string' ? body : (body.message || body.error || 'Request failed'));
             }
             return body;
         }
@@ -747,11 +750,17 @@
         }
 
         function openModal(id) { 
-            document.getElementById(id).classList.add('active'); 
+            document.getElementById(id).classList.add('active');
+            document.body.classList.add('modal-open');
             const errEl = document.getElementById(id.replace('Modal', 'Error'));
             if(errEl) { errEl.style.display = 'none'; errEl.innerText = ''; }
         }
-        function closeModal(id) { document.getElementById(id).classList.remove('active'); }
+        function closeModal(id) {
+            document.getElementById(id).classList.remove('active');
+            if (!document.querySelector('.glass-modal-overlay.active, .modal-overlay.active')) {
+                document.body.classList.remove('modal-open');
+            }
+        }
         function switchModal(closeId, openId) { closeModal(closeId); openModal(openId); }
 
         function initFullCalendar() {
@@ -1653,6 +1662,7 @@
 <script>
     // 1. சர்வரில் இருந்து லேட்டஸ்ட் டாஸ்க் டேட்டாவை ஃபெட்ச் செய்யும் பங்க்ஷன்
     function loadUserData() {
+        return loadTasks(false);
         fetch('/api/tasks?_=' + new Date().getTime(), {
             headers: {
                 'Authorization': 'Bearer ' + localStorage.getItem('token')
@@ -1693,13 +1703,16 @@ stompClient.connect({}, function (frame) {
     // Admin மற்றும் Student இருவருக்கும் Real-time Task Sync ஆக Subscribe செய்கிறோம்
     stompClient.subscribe('/topic/tasks', function (taskOutput) {
         // சர்வரில் ஏதேனும் மாற்றம் நடந்தால் உடனே 2 சாதனங்களிலும் டேட்டா புதுப்பிக்கப்படும்
-        loadUserData(); 
+        loadTasks(false);
+    });
+    stompClient.subscribe('/topic/calendar-events', function (eventOutput) {
+        loadTasks(false);
     });
 });
 </script>
 <script>
   function connectAdminWebSocket() {
-    const wsSocket = new SockJS('https://smart-task-manager-rnxh.onrender.com/ws-task');
+    const wsSocket = new SockJS('/ws-task?t=' + new Date().getTime());
     const adminStompClient = Stomp.over(wsSocket);
 
     // டிபக் லாக்குகளை ஆஃப் செய்ய (தேவையற்ற கன்சோல் மெசேஜ்களை தவிர்க்க)
@@ -1709,6 +1722,8 @@ stompClient.connect({}, function (frame) {
         console.log('Admin WebSocket Connected Successfully!');
         
         adminStompClient.subscribe('/topic/admin-tasks', function (taskMessage) {
+            loadTasks(false);
+            return;
             let task = JSON.parse(taskMessage.body);
             // டாஸ்க் வந்தவுடன் அட்மின் டேபிளில் ஆட்டோமேட்டிக்காகக் காட்டும் ஃபங்ஷன்
             appendTaskToAdminTable(task);

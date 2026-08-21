@@ -3,6 +3,7 @@ package com.example.taskmanager.controller;
 import com.example.taskmanager.model.Event;
 import com.example.taskmanager.repository.EventRepository;
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.DateUtil;
 import org.apache.poi.ss.usermodel.Row;
@@ -13,7 +14,6 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.CrossOrigin;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -31,17 +31,21 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 
 @RestController
 @RequestMapping("/api/events")
 @CrossOrigin(origins = "*")
 public class EventController {
+
+    private static final int MAX_IMPORTED_TEXT_LENGTH = 2000;
 
     private final EventRepository eventRepository;
     private final SimpMessagingTemplate messagingTemplate;
@@ -57,27 +61,33 @@ public class EventController {
     }
 
     @PostMapping(value = "/upload", consumes = MediaType.MULTIPART_FORM_DATA_VALUE)
-    public ResponseEntity<Map<String, Object>> uploadEvents(@RequestParam("file") MultipartFile file) {
-        if (file.isEmpty() || file.getOriginalFilename() == null) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose an .xlsx or .csv file");
+    public ResponseEntity<Map<String, Object>> uploadEvents(
+            @RequestParam(value = "file", required = false) MultipartFile file,
+            @RequestParam(value = "excel", required = false) MultipartFile excel) {
+            
+        MultipartFile uploadFile = (file != null) ? file : excel;
+
+        if (uploadFile == null || uploadFile.isEmpty() || uploadFile.getOriginalFilename() == null) {
+            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Choose a valid .xlsx or .csv file");
         }
 
-        String filename = file.getOriginalFilename().toLowerCase();
+        String filename = uploadFile.getOriginalFilename().toLowerCase();
         if (!filename.endsWith(".xlsx") && !filename.endsWith(".csv")) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Only .xlsx and .csv files are supported");
         }
 
         try {
-            Map<String, Object> result = filename.endsWith(".xlsx") ? importWorkbook(file) : importCsv(file);
+            Map<String, Object> result = filename.endsWith(".xlsx") ? importWorkbook(uploadFile) : importCsv(uploadFile);
             notifyCalendarRefresh();
             return ResponseEntity.ok(result);
-        } catch (IOException | RuntimeException exception) {
-            throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Could not parse the calendar file", exception);
+        } catch (Exception exception) {
+            Map<String, Object> errorMap = new HashMap<>();
+            errorMap.put("error", "File parsing failed: " + exception.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(errorMap);
         }
     }
 
     @PostMapping("/live-sync")
-    @Transactional
     public ResponseEntity<String> receiveLiveSync(@RequestBody List<LiveSyncEventRequest> sheetEvents) {
         if (sheetEvents == null) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "Request body must be a JSON array");
@@ -107,39 +117,51 @@ public class EventController {
     private Map<String, Object> importWorkbook(MultipartFile file) throws IOException {
         int imported = 0;
         List<String> errors = new ArrayList<>();
+        List<Event> eventsToSave = new ArrayList<>();
         DataFormatter formatter = new DataFormatter();
 
         try (Workbook workbook = WorkbookFactory.create(file.getInputStream())) {
-            Sheet sheet = workbook.getSheetAt(0);
-            for (int rowIndex = 5; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
-                Row row = sheet.getRow(rowIndex);
-                if (row == null) {
-                    continue;
-                }
+            for (int s = 0; s < workbook.getNumberOfSheets(); s++) {
+                Sheet sheet = workbook.getSheetAt(s);
+                boolean placementSheet = "Placement".equalsIgnoreCase(sheet.getSheetName().trim());
+                int startRow = placementSheet ? 1 : 5;
+                int dateColumn = placementSheet ? 1 : 2;
+                int titleColumn = placementSheet ? 2 : 3;
+                int categoryColumn = placementSheet ? -1 : 4;
+                int coordinatorColumn = placementSheet ? 3 : 5;
 
-                String dateValue = cellValue(row.getCell(2), formatter);
-                String title = cellValue(row.getCell(3), formatter);
-                if (dateValue.isBlank() && title.isBlank()) {
-                    continue;
-                }
+                for (int rowIndex = startRow; rowIndex <= sheet.getLastRowNum(); rowIndex++) {
+                    Row row = sheet.getRow(rowIndex);
+                    if (row == null) {
+                        continue;
+                    }
 
-                try {
-                    Event event = new Event();
-                    event.setEventDate(parseDate(dateValue));
-                    event.setTitle(requiredValue(title, "title of the event"));
-                    event.setDepartment(sheet.getSheetName());
-                    event.setCategory(cellValue(row.getCell(4), formatter));
-                    event.setFacultyCoordinator(cellValue(row.getCell(5), formatter));
-                    eventRepository.save(event);
-                    imported++;
-                } catch (RuntimeException exception) {
-                    errors.add("Row " + (rowIndex + 1) + ": " + exception.getMessage());
+                    String dateValue = cellValue(row.getCell(dateColumn), formatter);
+                    String title = cellValue(row.getCell(titleColumn), formatter);
+                    
+                    if (dateValue.isBlank() || title.isBlank()) {
+                        continue;
+                    }
+
+                    try {
+                        Event event = new Event();
+                        event.setEventDate(parseDate(dateValue));
+                        event.setTitle(limitImportedText(title.trim()));
+                        event.setDepartment(limitImportedText(sheet.getSheetName()));
+                        event.setCategory(limitImportedText(placementSheet ? "Placement" : cellValue(row.getCell(categoryColumn), formatter)));
+                        event.setFacultyCoordinator(limitImportedText(cellValue(row.getCell(coordinatorColumn), formatter)));
+                        eventsToSave.add(event);
+                        imported++;
+                    } catch (Exception exception) {
+                        errors.add("Sheet '" + sheet.getSheetName() + "' Row " + (rowIndex + 1) + ": " + exception.getMessage());
+                    }
                 }
             }
         }
 
-        if (imported == 0 && errors.isEmpty()) {
-            throw new IllegalArgumentException("The workbook has no dated events from row 6 onward");
+        if (!eventsToSave.isEmpty()) {
+            eventRepository.deleteAll();
+            eventRepository.saveAll(eventsToSave);
         }
 
         return importResult(imported, errors);
@@ -158,28 +180,43 @@ public class EventController {
         Map<String, Integer> columns = headerIndexes(rows.remove(0));
         int imported = 0;
         List<String> errors = new ArrayList<>();
+        List<Event> eventsToSave = new ArrayList<>();
 
         for (int rowIndex = 0; rowIndex < rows.size(); rowIndex++) {
             String[] row = rows.get(rowIndex);
+            String title = value(row, columns, "title");
+            String date = value(row, columns, "date");
+
+            if (title.isBlank() || date.isBlank()) {
+                continue;
+            }
+
             try {
                 Event event = new Event();
-                event.setTitle(requiredValue(value(row, columns, "title"), "title"));
-                event.setEventDate(parseDate(requiredValue(value(row, columns, "date"), "date")));
-                event.setDepartment(firstPresent(row, columns, "department", "dept"));
-                event.setCategory(firstPresent(row, columns, "category", "type", "department"));
-                event.setFacultyCoordinator(firstPresent(row, columns, "faculty coordinator", "coordinator"));
-                eventRepository.save(event);
+                event.setTitle(limitImportedText(title.trim()));
+                event.setEventDate(parseDate(date));
+                event.setDepartment(limitImportedText(firstPresent(row, columns, "department", "dept")));
+                event.setCategory(limitImportedText(firstPresent(row, columns, "category", "type", "department")));
+                event.setFacultyCoordinator(limitImportedText(firstPresent(row, columns, "faculty coordinator", "coordinator")));
+                eventsToSave.add(event);
                 imported++;
-            } catch (RuntimeException exception) {
+            } catch (Exception exception) {
                 errors.add("Row " + (rowIndex + 2) + ": " + exception.getMessage());
             }
+        }
+
+        if (!eventsToSave.isEmpty()) {
+            eventRepository.deleteAll();
+            eventRepository.saveAll(eventsToSave);
         }
 
         return importResult(imported, errors);
     }
 
     private void notifyCalendarRefresh() {
-        messagingTemplate.convertAndSend("/topic/calendar-events", "REFRESH");
+        if (messagingTemplate != null) {
+            messagingTemplate.convertAndSend("/topic/calendar-events", "REFRESH");
+        }
     }
 
     private Map<String, Object> importResult(int imported, List<String> errors) {
@@ -193,7 +230,7 @@ public class EventController {
         if (cell == null) {
             return "";
         }
-        if (DateUtil.isCellDateFormatted(cell)) {
+        if (cell.getCellType() == CellType.NUMERIC && DateUtil.isCellDateFormatted(cell)) {
             Date date = cell.getDateCellValue();
             return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().format(DateTimeFormatter.ISO_LOCAL_DATE);
         }
@@ -242,6 +279,13 @@ public class EventController {
         return "";
     }
 
+    private static String limitImportedText(String value) {
+        if (value == null) {
+            return "";
+        }
+        return value.length() > MAX_IMPORTED_TEXT_LENGTH ? value.substring(0, MAX_IMPORTED_TEXT_LENGTH) : value;
+    }
+
     private String requiredValue(String value, String label) {
         if (value == null || value.isBlank()) {
             throw new IllegalArgumentException(label + " is required");
@@ -250,7 +294,7 @@ public class EventController {
     }
 
     private LocalDate parseDate(String value) {
-        String date = requiredValue(value, "date");
+        String date = firstDateInRange(requiredValue(value, "date"));
         try {
             double excelSerial = Double.parseDouble(date);
             if (DateUtil.isValidExcelDate(excelSerial)) {
@@ -259,19 +303,48 @@ public class EventController {
         } catch (NumberFormatException ignored) {
         }
 
-        for (DateTimeFormatter formatter : List.of(
+        List<DateTimeFormatter> formatters = List.of(
                 DateTimeFormatter.ISO_LOCAL_DATE,
                 DateTimeFormatter.ofPattern("d/M/yyyy"),
                 DateTimeFormatter.ofPattern("dd/MM/yyyy"),
                 DateTimeFormatter.ofPattern("M/d/yyyy"),
-                DateTimeFormatter.ofPattern("MM/dd/yyyy"))) {
+                DateTimeFormatter.ofPattern("MM/dd/yyyy"),
+                DateTimeFormatter.ofPattern("d/M/yy"),
+                DateTimeFormatter.ofPattern("dd/MM/yy"),
+                DateTimeFormatter.ofPattern("M/d/yy"),
+                DateTimeFormatter.ofPattern("MM/dd/yy"),
+                DateTimeFormatter.ofPattern("dd-MM-yyyy"),
+                DateTimeFormatter.ofPattern("d-M-yyyy"),
+                DateTimeFormatter.ofPattern("dd-MM-yy"),
+                DateTimeFormatter.ofPattern("d-M-yy"),
+                DateTimeFormatter.ofPattern("yyyy/MM/dd"),
+                DateTimeFormatter.ofPattern("dd.MM.yyyy"),
+                DateTimeFormatter.ofPattern("dd.MM.yy"),
+                new DateTimeFormatterBuilder().parseCaseInsensitive().appendPattern("dd-MMM-yyyy").toFormatter(Locale.ENGLISH),
+                new DateTimeFormatterBuilder().parseCaseInsensitive().appendPattern("d-MMM-yyyy").toFormatter(Locale.ENGLISH),
+                new DateTimeFormatterBuilder().parseCaseInsensitive().appendPattern("dd-MMM-yy").toFormatter(Locale.ENGLISH),
+                new DateTimeFormatterBuilder().parseCaseInsensitive().appendPattern("d-MMM-yy").toFormatter(Locale.ENGLISH)
+        );
+
+        for (DateTimeFormatter formatter : formatters) {
             try {
                 return LocalDate.parse(date, formatter);
             } catch (DateTimeParseException ignored) {
             }
         }
 
-        throw new IllegalArgumentException("date must use yyyy-MM-dd, dd/MM/yyyy, or M/d/yyyy");
+        throw new IllegalArgumentException("Invalid date format '" + date + "'");
+    }
+
+    private String firstDateInRange(String value) {
+        String normalized = value == null ? "" : value.trim().replaceAll("\\s+", " ");
+        for (String delimiter : List.of(" to ", " - ", " TO ", " - ")) {
+            int delimiterIndex = normalized.indexOf(delimiter);
+            if (delimiterIndex > 0) {
+                return normalized.substring(0, delimiterIndex).trim();
+            }
+        }
+        return normalized;
     }
 
     public record LiveSyncEventRequest(
@@ -287,28 +360,51 @@ public class EventController {
 
         private Event toEvent(int rowNumber) {
             Event event = new Event();
-            event.setDepartment(trimToEmpty(department));
+            event.setDepartment(limitImportedText(trimToEmpty(department)));
             event.setEventDate(parseLiveSyncDate(date, rowNumber));
-            event.setTitle(requiredLiveSyncValue(title, "title", rowNumber));
-            event.setCategory(trimToEmpty(type));
-            event.setFacultyCoordinator(trimToEmpty(coordinator));
+            event.setTitle(limitImportedText(requiredLiveSyncValue(title, "title", rowNumber)));
+            event.setCategory(limitImportedText(trimToEmpty(type)));
+            event.setFacultyCoordinator(limitImportedText(trimToEmpty(coordinator)));
             return event;
         }
 
         private static LocalDate parseLiveSyncDate(String value, int rowNumber) {
-            String dateValue = requiredLiveSyncValue(value, "date", rowNumber);
-            for (DateTimeFormatter formatter : List.of(
+            String dateValue = firstLiveSyncDateInRange(requiredLiveSyncValue(value, "date", rowNumber));
+            
+            List<DateTimeFormatter> formatters = List.of(
                     DateTimeFormatter.ISO_LOCAL_DATE,
                     DateTimeFormatter.ofPattern("d/M/yyyy"),
                     DateTimeFormatter.ofPattern("dd/MM/yyyy"),
                     DateTimeFormatter.ofPattern("M/d/yyyy"),
-                    DateTimeFormatter.ofPattern("MM/dd/yyyy"))) {
+                    DateTimeFormatter.ofPattern("MM/dd/yyyy"),
+                    DateTimeFormatter.ofPattern("d/M/yy"),
+                    DateTimeFormatter.ofPattern("M/d/yy"),
+                    DateTimeFormatter.ofPattern("dd-MM-yyyy"),
+                    DateTimeFormatter.ofPattern("d-M-yyyy"),
+                    DateTimeFormatter.ofPattern("d-M-yy"),
+                    DateTimeFormatter.ofPattern("yyyy/MM/dd"),
+                    DateTimeFormatter.ofPattern("dd.MM.yyyy"),
+                    new DateTimeFormatterBuilder().parseCaseInsensitive().appendPattern("dd-MMM-yyyy").toFormatter(Locale.ENGLISH)
+            );
+
+            for (DateTimeFormatter formatter : formatters) {
                 try {
                     return LocalDate.parse(dateValue, formatter);
                 } catch (DateTimeParseException ignored) {
                 }
             }
-            throw new IllegalArgumentException("row " + rowNumber + ": date must use yyyy-MM-dd, dd/MM/yyyy, or M/d/yyyy");
+            throw new IllegalArgumentException("row " + rowNumber + ": date must use yyyy-MM-dd, dd/MM/yyyy, or dd-MM-yyyy");
+        }
+
+        private static String firstLiveSyncDateInRange(String value) {
+            String normalized = value == null ? "" : value.trim().replaceAll("\\s+", " ");
+            for (String delimiter : List.of(" to ", " - ", " TO ")) {
+                int delimiterIndex = normalized.indexOf(delimiter);
+                if (delimiterIndex > 0) {
+                    return normalized.substring(0, delimiterIndex).trim();
+                }
+            }
+            return normalized;
         }
 
         private static String requiredLiveSyncValue(String value, String label, int rowNumber) {

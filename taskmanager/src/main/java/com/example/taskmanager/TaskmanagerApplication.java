@@ -4,6 +4,7 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import io.swagger.v3.oas.annotations.OpenAPIDefinition;
 import io.swagger.v3.oas.annotations.info.Info;
+
 import java.net.URI;
 
 @SpringBootApplication
@@ -26,7 +27,12 @@ public class TaskmanagerApplication {
         String dbUrl = System.getenv("DB_URL");
         String dbUsername = System.getenv("DB_USERNAME");
         String dbPassword = System.getenv("DB_PASSWORD");
+
         if (dbUrl != null && !dbUrl.isBlank() && dbUsername != null && !dbUsername.isBlank() && dbPassword != null && !dbPassword.isBlank()) {
+            System.setProperty("spring.datasource.url", dbUrl);
+            System.setProperty("spring.datasource.username", dbUsername);
+            System.setProperty("spring.datasource.password", dbPassword);
+            System.setProperty("spring.datasource.driver-class-name", "org.postgresql.Driver");
             return;
         }
 
@@ -59,22 +65,35 @@ public class TaskmanagerApplication {
             if (database != null && database.startsWith("/")) {
                 database = database.substring(1);
             }
-            String jdbcUrl = "jdbc:postgresql://" + host + ":" + port + "/" + database;
+
+            StringBuilder jdbcUrl = new StringBuilder("jdbc:postgresql://")
+                    .append(host)
+                    .append(":")
+                    .append(port)
+                    .append("/")
+                    .append(database);
+
             String query = uri.getQuery();
             if (query != null && !query.isBlank()) {
-                jdbcUrl += "?" + query;
+                jdbcUrl.append("?").append(query);
+                if (!query.contains("sslmode=")) {
+                    jdbcUrl.append("&sslmode=require");
+                }
+            } else {
+                jdbcUrl.append("?sslmode=require");
             }
 
-            System.setProperty("spring.datasource.url", jdbcUrl);
+            System.setProperty("spring.datasource.url", jdbcUrl.toString());
             System.setProperty("spring.datasource.driver-class-name", "org.postgresql.Driver");
-        } catch (Exception ignored) {
-            // If parsing fails, let Spring fall back to environment variables or fail cleanly.
+        } catch (Exception e) {
+            System.err.println("Failed to parse DATABASE_URL variable: " + e.getMessage());
         }
     }
 
     private static void configureOAuthProperties() {
         String googleClientId = System.getenv("GOOGLE_CLIENT_ID");
         String googleClientSecret = System.getenv("GOOGLE_CLIENT_SECRET");
+        
         if (googleClientId == null || googleClientId.isBlank()
                 || googleClientSecret == null || googleClientSecret.isBlank()) {
             return;

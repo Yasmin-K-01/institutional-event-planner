@@ -11,12 +11,18 @@ public class Event {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "TEXT")
     private String title;
 
     private LocalDate eventDate;
+
+    @Column(columnDefinition = "TEXT")
     private String department;
+
+    @Column(columnDefinition = "TEXT")
     private String category;
+
+    @Column(columnDefinition = "TEXT")
     private String facultyCoordinator;
 
     public Long getId() { return id; }

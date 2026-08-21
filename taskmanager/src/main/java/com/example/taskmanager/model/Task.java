@@ -14,7 +14,10 @@ public class Task {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    @Column(columnDefinition = "TEXT")
     private String title;
+
+    @Column(columnDefinition = "TEXT")
     private String description;
 
     @Enumerated(EnumType.STRING)
@@ -30,6 +33,7 @@ public class Task {
     private String role;
     private String createdBy;
     private String assignedTo;
+    @Column(columnDefinition = "TEXT")
     private String facultyCoordinator;
 
     @ManyToOne(fetch = FetchType.EAGER)

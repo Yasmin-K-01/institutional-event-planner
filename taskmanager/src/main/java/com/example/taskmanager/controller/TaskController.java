@@ -33,16 +33,18 @@ import java.nio.charset.StandardCharsets;
 import java.time.LocalDate;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeFormatterBuilder;
 import java.time.format.DateTimeParseException;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.List;
+import java.util.Locale;
 import java.util.Map;
 import java.util.stream.Collectors;
 
 import org.apache.poi.ss.usermodel.Cell;
+import org.apache.poi.ss.usermodel.CellType;
 import org.apache.poi.ss.usermodel.DataFormatter;
 import org.apache.poi.ss.usermodel.DateUtil;
 import org.apache.poi.ss.usermodel.Row;
@@ -390,10 +392,6 @@ public class TaskController {
         if (cell == null) {
             return "";
         }
-        if (DateUtil.isCellDateFormatted(cell)) {
-            Date date = cell.getDateCellValue();
-            return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate().format(DateTimeFormatter.ofPattern("d/M/yyyy"));
-        }
         return formatter.formatCellValue(cell).trim();
     }
 
@@ -427,23 +425,64 @@ public class TaskController {
     }
 
     private LocalDate parseDate(String value) {
+        LocalDate parsedDate = tryParseSingleDate(value);
+        if (parsedDate != null) {
+            return parsedDate;
+        }
+
+        String rangeStart = firstDateInRange(value);
+        if (!rangeStart.equals(value.trim())) {
+            parsedDate = tryParseSingleDate(rangeStart);
+            if (parsedDate != null) {
+                return parsedDate;
+            }
+        }
+
+        throw new IllegalArgumentException("due date must use yyyy-MM-dd, dd/MM/yyyy, M/d/yyyy, or a date range");
+    }
+
+    private LocalDate tryParseSingleDate(String value) {
+        String dateValue = value == null ? "" : value.trim();
+        if (dateValue.isBlank()) {
+            return null;
+        }
         try {
-            double excelSerial = Double.parseDouble(value);
+            double excelSerial = Double.parseDouble(dateValue);
             if (DateUtil.isValidExcelDate(excelSerial)) {
-                Date date = DateUtil.getJavaDate(excelSerial);
-                return date.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+                return DateUtil.getJavaDate(excelSerial).toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
             }
         } catch (NumberFormatException ignored) {
         }
         for (DateTimeFormatter formatter : List.of(DateTimeFormatter.ISO_LOCAL_DATE,
             DateTimeFormatter.ofPattern("d/M/yyyy"), DateTimeFormatter.ofPattern("dd/MM/yyyy"),
-            DateTimeFormatter.ofPattern("M/d/yyyy"))) {
+            DateTimeFormatter.ofPattern("M/d/yyyy"), DateTimeFormatter.ofPattern("MM/dd/yyyy"),
+            DateTimeFormatter.ofPattern("d/M/yy"), DateTimeFormatter.ofPattern("dd/MM/yy"),
+            DateTimeFormatter.ofPattern("M/d/yy"), DateTimeFormatter.ofPattern("MM/dd/yy"),
+            DateTimeFormatter.ofPattern("dd-MM-yyyy"), DateTimeFormatter.ofPattern("d-M-yyyy"),
+            DateTimeFormatter.ofPattern("yyyy/MM/dd"), DateTimeFormatter.ofPattern("dd.MM.yyyy"),
+            new DateTimeFormatterBuilder().parseCaseInsensitive().appendPattern("dd-MMM-yyyy").toFormatter(Locale.ENGLISH),
+            new DateTimeFormatterBuilder().parseCaseInsensitive().appendPattern("d-MMM-yyyy").toFormatter(Locale.ENGLISH),
+            new DateTimeFormatterBuilder().parseCaseInsensitive().appendPattern("dd-MMM-yy").toFormatter(Locale.ENGLISH),
+            new DateTimeFormatterBuilder().parseCaseInsensitive().appendPattern("d-MMM-yy").toFormatter(Locale.ENGLISH),
+            new DateTimeFormatterBuilder().parseCaseInsensitive().appendPattern("dd MMM yyyy").toFormatter(Locale.ENGLISH),
+            new DateTimeFormatterBuilder().parseCaseInsensitive().appendPattern("d MMM yyyy").toFormatter(Locale.ENGLISH))) {
             try {
-                return LocalDate.parse(value, formatter);
+                return LocalDate.parse(dateValue, formatter);
             } catch (DateTimeParseException ignored) {
             }
         }
-        throw new IllegalArgumentException("due date must use yyyy-MM-dd or M/d/yyyy");
+        return null;
+    }
+
+    private String firstDateInRange(String value) {
+        String normalized = value == null ? "" : value.trim().replaceAll("\\s+", " ");
+        for (String delimiter : List.of(" to ", " - ")) {
+            int delimiterIndex = normalized.toLowerCase(Locale.ENGLISH).indexOf(delimiter);
+            if (delimiterIndex > 0) {
+                return normalized.substring(0, delimiterIndex).trim();
+            }
+        }
+        return normalized;
     }
 
     @PatchMapping("/{id}/status")
